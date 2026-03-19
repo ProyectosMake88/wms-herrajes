@@ -86,16 +86,16 @@ export class AuthService {
   async seedAdmin() {
     const count = await prisma.user.count();
     if (count === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const hashedPassword = await bcrypt.hash('Juankp88', 10);
       await prisma.user.create({
         data: {
-          email: 'admin@herrajes.com',
+          email: 'gerencia@makead.com.co',
           password: hashedPassword,
-          name: 'Administrador',
+          name: 'Gerencia',
           role: UserRole.ADMIN,
         },
       });
-      console.log('👤 Usuario admin creado: admin@herrajes.com / admin123');
+      console.log('👤 Usuario admin creado: gerencia@makead.com.co');
     }
   }
 }
