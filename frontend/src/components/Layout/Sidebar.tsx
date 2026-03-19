@@ -89,23 +89,8 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* User info + Logout */}
-      <div className="px-4 pb-6 space-y-3">
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3">
-          <div className="flex items-center gap-3">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover border border-white/20" />
-            ) : (
-              <div className="w-9 h-9 bg-primary-400/30 rounded-lg flex items-center justify-center">
-                {isAdmin ? <Users className="w-4 h-4 text-primary-100" /> : <ShoppingBag className="w-4 h-4 text-primary-100" />}
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-              <p className="text-[10px] text-primary-300">{isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrador' : 'Vendedor'}</p>
-            </div>
-          </div>
-        </div>
+      {/* Logout */}
+      <div className="px-4 pb-6">
         <button
           onClick={logout}
           className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-primary-200 hover:text-white hover:bg-white/10 rounded-xl transition"
