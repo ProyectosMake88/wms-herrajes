@@ -129,6 +129,19 @@ export const authApi = {
   deleteUser: (id: number) => request<any>(`/auth/users/${id}`, { method: 'DELETE' }),
 };
 
+// Company
+export const companyApi = {
+  getProfile: () => request<any>('/company'),
+  updateProfile: (data: Record<string, any>, logoFile?: File) => {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) formData.append(key, String(value));
+    });
+    if (logoFile) formData.append('logo', logoFile);
+    return requestFormData<any>('/company', 'PUT', formData);
+  },
+};
+
 // Notifications
 export const notificationApi = {
   getAll: () => request<any>('/notifications'),

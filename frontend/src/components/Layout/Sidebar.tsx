@@ -4,6 +4,7 @@ import {
   AlertTriangle, Warehouse, Users, ShoppingBag, LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useCompany } from '../../context/CompanyContext';
 
 const adminNav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -22,18 +23,23 @@ const sellerNav = [
 
 export default function Sidebar() {
   const { user, isAdmin, logout } = useAuth();
+  const { company } = useCompany();
   const navItems = isAdmin ? adminNav : sellerNav;
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-primary-700 via-primary-800 to-primary-900 text-white flex flex-col z-50">
       {/* Logo */}
       <div className="px-6 py-6 flex items-center gap-3 border-b border-primary-600/40">
-        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-          <Warehouse className="w-6 h-6 text-white" />
-        </div>
+        {company?.logoUrl ? (
+          <img src={company.logoUrl} alt="Logo" className="w-10 h-10 rounded-xl object-cover border border-white/20" />
+        ) : (
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <Warehouse className="w-6 h-6 text-white" />
+          </div>
+        )}
         <div>
-          <h1 className="text-lg font-bold leading-tight">WMS</h1>
-          <p className="text-[11px] text-primary-200 leading-tight">Herrajes Inventario</p>
+          <h1 className="text-lg font-bold leading-tight">{company?.name || 'WMS'}</h1>
+          <p className="text-[11px] text-primary-200 leading-tight">Sistema de Inventario</p>
         </div>
       </div>
 

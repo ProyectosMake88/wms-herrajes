@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Bell, User, AlertTriangle, ShoppingBag, ArrowDownToLine,
-  PackageX, Check, CheckCheck,
+  PackageX, Check, CheckCheck, Building2, Camera, Save, X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { notificationApi } from '../../services/api';
+import { useCompany } from '../../context/CompanyContext';
+import { notificationApi, companyApi } from '../../services/api';
+import Modal from '../ui/Modal';
 
 interface Notification {
   id: number;
@@ -41,25 +43,34 @@ function timeAgo(date: string) {
 }
 
 export default function Header({ title, subtitle }: HeaderProps) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const { company, reload: reloadCompany } = useCompany();
+
+  // Notifications state
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // Company profile modal
+  const [showProfile, setShowProfile] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [companyForm, setCompanyForm] = useState({
+    name: '', nit: '', address: '', phone: '', email: '', website: '',
+  });
 
   useEffect(() => {
     loadNotifications();
-    // Poll every 30 seconds
     const interval = setInterval(loadNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifications(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -70,21 +81,15 @@ export default function Header({ title, subtitle }: HeaderProps) {
       const res = await notificationApi.getAll();
       setNotifications(res.data.notifications);
       setUnreadCount(res.data.unreadCount);
-    } catch {
-      // silently fail
-    }
+    } catch {}
   }
 
   async function handleMarkAsRead(id: number) {
     try {
       await notificationApi.markAsRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-      );
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
       setUnreadCount((c) => Math.max(0, c - 1));
-    } catch {
-      // silently fail
-    }
+    } catch {}
   }
 
   async function handleMarkAllAsRead() {
@@ -92,113 +97,218 @@ export default function Header({ title, subtitle }: HeaderProps) {
       await notificationApi.markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
-    } catch {
-      // silently fail
+    } catch {}
+  }
+
+  function openProfile() {
+    setCompanyForm({
+      name: company?.name || '',
+      nit: company?.nit || '',
+      address: company?.address || '',
+      phone: company?.phone || '',
+      email: company?.email || '',
+      website: company?.website || '',
+    });
+    setLogoPreview(null);
+    setLogoFile(null);
+    setShowProfile(true);
+  }
+
+  function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await companyApi.updateProfile(companyForm, logoFile || undefined);
+      await reloadCompany();
+      setShowProfile(false);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
     }
   }
 
+  const displayLogo = logoPreview || company?.logoUrl;
+
   return (
-    <header className="flex items-center justify-between mb-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
-      </div>
+    <>
+      <header className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+        </div>
 
-      <div className="flex items-center gap-4">
-        {/* Notifications Bell */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => { setShowDropdown(!showDropdown); if (!showDropdown) loadNotifications(); }}
-            className="relative p-2.5 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition shadow-sm"
-          >
-            <Bell className="w-5 h-5 text-gray-600" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold px-1">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </button>
+        <div className="flex items-center gap-4">
+          {/* Notifications Bell */}
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => { setShowNotifications(!showNotifications); if (!showNotifications) loadNotifications(); }}
+              className="relative p-2.5 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition shadow-sm"
+            >
+              <Bell className="w-5 h-5 text-gray-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
 
-          {/* Dropdown */}
-          {showDropdown && (
-            <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[100] overflow-hidden">
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-800">Notificaciones</h3>
+            {showNotifications && (
+              <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[100] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-800">Notificaciones</h3>
+                    {unreadCount > 0 && <p className="text-[11px] text-gray-500">{unreadCount} sin leer</p>}
+                  </div>
                   {unreadCount > 0 && (
-                    <p className="text-[11px] text-gray-500">{unreadCount} sin leer</p>
+                    <button onClick={handleMarkAllAsRead} className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium">
+                      <CheckCheck className="w-3.5 h-3.5" /> Marcar todas
+                    </button>
                   )}
                 </div>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={handleMarkAllAsRead}
-                    className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    <CheckCheck className="w-3.5 h-3.5" /> Marcar todas
-                  </button>
-                )}
-              </div>
-
-              {/* Notification List */}
-              <div className="max-h-[400px] overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">No hay notificaciones</p>
-                  </div>
-                ) : (
-                  notifications.map((notif) => {
-                    const config = typeConfig[notif.type];
-                    const Icon = config.icon;
-                    return (
-                      <div
-                        key={notif.id}
-                        className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 transition hover:bg-gray-50/80 ${
-                          !notif.isRead ? 'bg-primary-50/30' : ''
-                        }`}
-                      >
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${config.bg}`}>
-                          <Icon className={`w-4 h-4 ${config.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className={`text-xs font-semibold ${!notif.isRead ? 'text-gray-900' : 'text-gray-600'}`}>
-                              {notif.title}
-                            </p>
-                            <span className="text-[10px] text-gray-400 flex-shrink-0">{timeAgo(notif.createdAt)}</span>
+                <div className="max-h-[400px] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-400">No hay notificaciones</p>
+                    </div>
+                  ) : (
+                    notifications.map((notif) => {
+                      const config = typeConfig[notif.type];
+                      const Icon = config.icon;
+                      return (
+                        <div key={notif.id} className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 transition hover:bg-gray-50/80 ${!notif.isRead ? 'bg-primary-50/30' : ''}`}>
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${config.bg}`}>
+                            <Icon className={`w-4 h-4 ${config.color}`} />
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{notif.message}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`text-xs font-semibold ${!notif.isRead ? 'text-gray-900' : 'text-gray-600'}`}>{notif.title}</p>
+                              <span className="text-[10px] text-gray-400 flex-shrink-0">{timeAgo(notif.createdAt)}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{notif.message}</p>
+                          </div>
+                          {!notif.isRead && (
+                            <button onClick={(e) => { e.stopPropagation(); handleMarkAsRead(notif.id); }} className="p-1 hover:bg-gray-200 rounded-md transition flex-shrink-0 mt-0.5" title="Marcar como leída">
+                              <Check className="w-3.5 h-3.5 text-gray-400" />
+                            </button>
+                          )}
                         </div>
-                        {!notif.isRead && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleMarkAsRead(notif.id); }}
-                            className="p-1 hover:bg-gray-200 rounded-md transition flex-shrink-0 mt-0.5"
-                            title="Marcar como leída"
-                          >
-                            <Check className="w-3.5 h-3.5 text-gray-400" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
+                </div>
               </div>
+            )}
+          </div>
+
+          {/* User / Company Button */}
+          <button
+            onClick={openProfile}
+            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-sm hover:bg-gray-50 transition cursor-pointer"
+          >
+            {company?.logoUrl ? (
+              <img src={company.logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
+            ) : (
+              <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                <Building2 className="w-4 h-4 text-primary-600" />
+              </div>
+            )}
+            <div className="text-right">
+              <p className="text-sm font-semibold text-gray-800 leading-tight">{user?.name}</p>
+              <p className="text-[11px] text-gray-400 leading-tight">{user?.role === 'ADMIN' ? 'Administrador' : 'Vendedor'}</p>
+            </div>
+          </button>
+        </div>
+      </header>
+
+      {/* Company Profile Modal */}
+      <Modal isOpen={showProfile} onClose={() => setShowProfile(false)} title="Perfil de la Empresa" maxWidth="max-w-xl">
+        <form onSubmit={handleSaveProfile} className="space-y-5">
+          {/* Logo Upload */}
+          <div className="flex flex-col items-center">
+            <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoSelect} className="hidden" />
+            <div className="relative group cursor-pointer" onClick={() => isAdmin && logoInputRef.current?.click()}>
+              {displayLogo ? (
+                <img src={displayLogo} alt="Logo" className="w-28 h-28 rounded-2xl object-cover border-2 border-gray-200 shadow-sm" />
+              ) : (
+                <div className="w-28 h-28 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center">
+                  <Building2 className="w-10 h-10 text-gray-300" />
+                  <span className="text-[10px] text-gray-400 mt-1">Logo empresa</span>
+                </div>
+              )}
+              {isAdmin && (
+                <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
+              )}
+            </div>
+            {isAdmin && <p className="text-xs text-gray-400 mt-2">Haz clic para cambiar el logo</p>}
+          </div>
+
+          {/* Company Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la empresa</label>
+              <input value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                disabled={!isAdmin}
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none disabled:opacity-60" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">NIT</label>
+              <input value={companyForm.nit} onChange={(e) => setCompanyForm({ ...companyForm, nit: e.target.value })}
+                disabled={!isAdmin} placeholder="900.123.456-7"
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none disabled:opacity-60" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+              <input value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                disabled={!isAdmin}
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none disabled:opacity-60" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+              <input value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                disabled={!isAdmin}
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none disabled:opacity-60" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
+                disabled={!isAdmin}
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none disabled:opacity-60" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sitio web</label>
+              <input value={companyForm.website} onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })}
+                disabled={!isAdmin} placeholder="https://..."
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none disabled:opacity-60" />
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setShowProfile(false)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition">
+                Cancelar
+              </button>
+              <button type="submit" disabled={saving}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200 disabled:opacity-50">
+                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                Guardar
+              </button>
             </div>
           )}
-        </div>
-
-        {/* User */}
-        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-sm">
-          <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-            <User className="w-4 h-4 text-primary-600" />
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-semibold text-gray-800 leading-tight">{user?.name}</p>
-            <p className="text-[11px] text-gray-400 leading-tight">{user?.role === 'ADMIN' ? 'Administrador' : 'Vendedor'}</p>
-          </div>
-        </div>
-      </div>
-    </header>
+        </form>
+      </Modal>
+    </>
   );
 }

@@ -9,6 +9,24 @@ datasource db {
 }
 
 // ============================================================
+// EMPRESA - Perfil de la empresa (singleton, solo 1 registro)
+// ============================================================
+model Company {
+  id        Int      @id @default(1)
+  name      String   @default("Mi Empresa")
+  nit       String?  // NIT o identificación fiscal
+  address   String?
+  phone     String?
+  email     String?
+  website   String?
+  logoUrl   String?  @map("logo_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("company")
+}
+
+// ============================================================
 // USUARIOS - Gestión de acceso con roles
 // ============================================================
 model User {
