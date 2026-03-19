@@ -300,7 +300,9 @@ export default function Header({ title, subtitle }: HeaderProps) {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 body: formData,
               });
-              const data = await res.json();
+              const text = await res.text();
+              let data: any;
+              try { data = JSON.parse(text); } catch { throw new Error('Error al guardar. Intenta de nuevo.'); }
               if (!res.ok) throw new Error(data.message);
 
               const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email, avatarUrl: data.data?.avatarUrl || (user as any)?.avatarUrl };

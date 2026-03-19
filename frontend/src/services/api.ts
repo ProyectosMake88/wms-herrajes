@@ -29,7 +29,8 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error('Error del servidor. Intenta de nuevo.');
+    console.warn('Non-JSON response from', url, text.substring(0, 100));
+    return {} as T;
   }
   if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
   return data;
@@ -52,7 +53,8 @@ async function requestFormData<T>(url: string, method: string, formData: FormDat
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error('Error del servidor. Intenta de nuevo.');
+    console.warn('Non-JSON response from', url, text.substring(0, 100));
+    return {} as T;
   }
   if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
   return data;
