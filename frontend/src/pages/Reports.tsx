@@ -323,6 +323,8 @@ export default function Reports() {
                       <tr className="bg-gray-50/80">
                         <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Tipo</th>
                         <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Producto</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Categoría</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Unidad</th>
                         <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Cant.</th>
                         <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Venta Total</th>
                         <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Costo Total</th>
@@ -351,6 +353,8 @@ export default function Reports() {
                               )}
                             </td>
                             <td className="px-5 py-3 text-sm font-medium text-gray-800 text-center">{m.product?.name}</td>
+                            <td className="px-5 py-3 text-sm text-gray-600 text-center">{m.product?.category?.name || '—'}</td>
+                            <td className="px-5 py-3 text-sm text-gray-500 text-center">{m.product?.unitOfMeasure || '—'}</td>
                             <td className="px-5 py-3 text-sm font-bold text-center">{m.quantity}</td>
                             <td className="px-5 py-3 text-sm font-semibold text-center text-blue-600">
                               {m.type === 'EXIT' && saleTotal ? `$${saleTotal.toLocaleString('es-CO', { minimumFractionDigits: 2 })}` : '—'}

@@ -65,7 +65,7 @@ export class ReportService {
       where,
       include: {
         product: {
-          select: { id: true, name: true, sku: true, cost: true, price: true, category: { select: { name: true } } },
+          select: { id: true, name: true, sku: true, unitOfMeasure: true, cost: true, price: true, category: { select: { name: true } } },
         },
       },
       orderBy: { createdAt: 'desc' },

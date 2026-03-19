@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { MovementsReport } from '../types';
+import { MovementsReport, UNIT_LABELS } from '../types';
 
 const PURPLE = { argb: 'FF5B21B6' };
 const PURPLE_LIGHT = { argb: 'FFF5F3FF' };
@@ -206,24 +206,24 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   });
 
   ws2.columns = [
-    { width: 3 }, { width: 12 }, { width: 28 }, { width: 16 }, { width: 10 },
-    { width: 16 }, { width: 16 }, { width: 16 }, { width: 20 }, { width: 18 }, { width: 14 }, { width: 3 },
+    { width: 3 }, { width: 12 }, { width: 26 }, { width: 18 }, { width: 14 }, { width: 15 }, { width: 10 },
+    { width: 16 }, { width: 16 }, { width: 16 }, { width: 18 }, { width: 18 }, { width: 14 }, { width: 3 },
   ];
 
   // Header bar
-  for (let c = 1; c <= 12; c++) {
+  for (let c = 1; c <= 14; c++) {
     for (let r = 1; r <= 2; r++) {
       ws2.getCell(r, c).fill = { type: 'pattern', pattern: 'solid', fgColor: PURPLE };
     }
   }
-  ws2.mergeCells('B1:K1');
+  ws2.mergeCells('B1:M1');
   const t2 = ws2.getCell('B1');
   t2.value = 'DETALLE DE MOVIMIENTOS';
   t2.font = { size: 16, bold: true, color: WHITE };
   t2.alignment = { horizontal: 'center', vertical: 'middle' };
   ws2.getRow(1).height = 30;
 
-  ws2.mergeCells('B2:K2');
+  ws2.mergeCells('B2:M2');
   const t2sub = ws2.getCell('B2');
   t2sub.value = `${new Date(s.dateRange.from).toLocaleDateString('es-CO')} — ${new Date(s.dateRange.to).toLocaleDateString('es-CO')}`;
   t2sub.font = { size: 10, color: { argb: 'FFD4C9FF' } };
@@ -231,7 +231,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   ws2.getRow(2).height = 22;
 
   // Table headers (Row 4)
-  const headers = ['Tipo', 'Producto', 'SKU', 'Cant.', 'Venta Total', 'Costo Total', 'Utilidad', 'Motivo', 'Responsable', 'Fecha'];
+  const headers = ['Tipo', 'Producto', 'Categoría', 'Unidad', 'SKU', 'Cant.', 'Venta Total', 'Costo Total', 'Utilidad', 'Motivo', 'Responsable', 'Fecha'];
   const headerRow = ws2.getRow(4);
   headers.forEach((h, i) => {
     const cell = headerRow.getCell(i + 2);
@@ -254,9 +254,12 @@ export async function exportMovementsReport(report: MovementsReport, companyName
     const costTotal = m.product?.cost ? Number(m.product.cost) * m.quantity : 0;
     const profit = m.type === 'EXIT' ? saleTotal - costTotal : 0;
 
+    const unitLabel = m.product?.unitOfMeasure ? (UNIT_LABELS[m.product.unitOfMeasure as keyof typeof UNIT_LABELS] || m.product.unitOfMeasure) : '—';
     const values = [
       m.type === 'ENTRY' ? '▲ Entrada' : '▼ Salida',
       m.product?.name || '',
+      m.product?.category?.name || '—',
+      unitLabel,
       m.product?.sku || '',
       m.quantity,
       m.type === 'EXIT' && saleTotal ? fmt(saleTotal) : '—',
@@ -281,15 +284,19 @@ export async function exportMovementsReport(report: MovementsReport, companyName
         cell.font = { bold: true, size: 10, color: DARK };
         cell.alignment = { horizontal: 'left', vertical: 'middle' };
       } else if (i === 2) {
-        cell.font = { size: 9, color: PURPLE };
+        cell.font = { size: 10, color: { argb: 'FF7C3AED' } }; // Category in purple
       } else if (i === 3) {
-        cell.font = { bold: true, size: 11, color: DARK };
+        cell.font = { size: 10, color: { argb: 'FF4B5563' } }; // Unit
       } else if (i === 4) {
-        cell.font = { bold: true, size: 10, color: BLUE };
+        cell.font = { size: 9, color: PURPLE }; // SKU
       } else if (i === 5) {
-        cell.font = { bold: true, size: 10, color: AMBER };
+        cell.font = { bold: true, size: 11, color: DARK }; // Quantity
       } else if (i === 6) {
-        cell.font = { bold: true, size: 10, color: m.type === 'EXIT' ? (profit >= 0 ? GREEN : RED) : { argb: 'FF9CA3AF' } };
+        cell.font = { bold: true, size: 10, color: BLUE }; // Sale total
+      } else if (i === 7) {
+        cell.font = { bold: true, size: 10, color: AMBER }; // Cost total
+      } else if (i === 8) {
+        cell.font = { bold: true, size: 10, color: m.type === 'EXIT' ? (profit >= 0 ? GREEN : RED) : { argb: 'FF9CA3AF' } }; // Profit
       } else {
         cell.font = { size: 10, color: { argb: 'FF4B5563' } };
       }
@@ -304,7 +311,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   const totalCost = movements.filter((m: any) => m.type === 'EXIT').reduce((sum: number, m: any) => sum + (m.product?.cost ? Number(m.product.cost) * m.quantity : 0), 0);
   const totalQty = movements.reduce((sum: number, m: any) => sum + m.quantity, 0);
 
-  const totalValues = ['', 'TOTALES', '', totalQty, fmt(totalSale), fmt(totalCost), fmt(totalSale - totalCost), '', '', ''];
+  const totalValues = ['', 'TOTALES', '', '', '', totalQty, fmt(totalSale), fmt(totalCost), fmt(totalSale - totalCost), '', '', ''];
   totalValues.forEach((v, i) => {
     const cell = tRow.getCell(i + 2);
     cell.value = v;
@@ -317,7 +324,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
 
   // Footer
   const footerRow = ws2.getRow(totalRowNum + 2);
-  ws2.mergeCells(totalRowNum + 2, 2, totalRowNum + 2, 11);
+  ws2.mergeCells(totalRowNum + 2, 2, totalRowNum + 2, 13);
   const footerCell = footerRow.getCell(2);
   footerCell.value = `WMS Herrajes — Reporte generado el ${new Date().toLocaleString('es-CO')}`;
   footerCell.font = { size: 9, italic: true, color: { argb: 'FF9CA3AF' } };
