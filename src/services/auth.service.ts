@@ -22,7 +22,7 @@ interface LoginDTO {
 
 export class AuthService {
   async register(data: RegisterDTO) {
-    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    const existing = await prisma.user.findFirst({ where: { email: { equals: data.email, mode: 'insensitive' } } });
     if (existing) throw new Error('Ya existe un usuario con ese email');
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -42,8 +42,8 @@ export class AuthService {
   }
 
   async login(data: LoginDTO) {
-    const user = await prisma.user.findUnique({
-      where: { email: data.email },
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: data.email, mode: 'insensitive' } },
       include: { branch: { select: { id: true, name: true } } },
     });
     if (!user) throw new Error('Credenciales inválidas');
