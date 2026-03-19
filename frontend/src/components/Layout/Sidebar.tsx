@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Tags, ArrowLeftRight, BarChart3,
@@ -33,12 +34,25 @@ export default function Sidebar() {
   const { user, isAdmin, isSuperAdmin, logout } = useAuth();
   const { company } = useCompany();
   const navItems = isSuperAdmin ? superAdminNav : isAdmin ? adminNav : sellerNav;
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('wms_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.avatarUrl) setAvatarUrl(parsed.avatarUrl);
+      }
+    } catch {}
+  }, []);
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-primary-700 via-primary-800 to-primary-900 text-white flex flex-col z-50">
       {/* Logo */}
       <div className="px-6 py-6 flex items-center gap-3 border-b border-primary-600/40">
-        {company?.logoUrl ? (
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-xl object-cover border border-white/20" />
+        ) : company?.logoUrl ? (
           <img src={company.logoUrl} alt="Logo" className="w-10 h-10 rounded-xl object-cover border border-white/20" />
         ) : (
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -79,9 +93,13 @@ export default function Sidebar() {
       <div className="px-4 pb-6 space-y-3">
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-primary-400/30 rounded-lg flex items-center justify-center">
-              {isAdmin ? <Users className="w-4 h-4 text-primary-100" /> : <ShoppingBag className="w-4 h-4 text-primary-100" />}
-            </div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="w-9 h-9 rounded-lg object-cover border border-white/20" />
+            ) : (
+              <div className="w-9 h-9 bg-primary-400/30 rounded-lg flex items-center justify-center">
+                {isAdmin ? <Users className="w-4 h-4 text-primary-100" /> : <ShoppingBag className="w-4 h-4 text-primary-100" />}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
               <p className="text-[10px] text-primary-300">{isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrador' : 'Vendedor'}</p>
