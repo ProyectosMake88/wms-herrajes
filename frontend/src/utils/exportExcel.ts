@@ -72,7 +72,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   }
   ws1.mergeCells('B1:G1');
   const titleCell = ws1.getCell('B1');
-  titleCell.value = 'REPORTE DE MOVIMIENTOS';
+  titleCell.value = 'REPORTE DE VENTAS';
   titleCell.font = { size: 20, bold: true, color: WHITE };
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -98,12 +98,12 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   // SECTION: Resumen de Movimientos (Row 5-6)
   ws1.mergeCells('B5:G5');
   const secTitle1 = ws1.getCell('B5');
-  secTitle1.value = 'RESUMEN DE MOVIMIENTOS';
+  secTitle1.value = 'RESUMEN DE VENTAS';
   secTitle1.font = { size: 11, bold: true, color: PURPLE };
   secTitle1.border = { bottom: { style: 'medium', color: PURPLE } };
 
   // Cards row 1 (Row 7-8)
-  addCard(ws1, 7, 2, 'Total Movimientos', String(s.totalMovements), PURPLE);
+  addCard(ws1, 7, 2, 'Total Registros', String(s.totalMovements), PURPLE);
   addCard(ws1, 7, 3, 'Entradas', `${s.totalEntries} (${s.totalEntryQuantity} uds)`, GREEN);
   addCard(ws1, 7, 4, 'Salidas', `${s.totalExits} (${s.totalExitQuantity} uds)`, RED);
   addCard(ws1, 7, 5, 'Balance Neto', `${s.totalEntryQuantity - s.totalExitQuantity} uds`, BLUE);
@@ -201,7 +201,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   // ==========================================
   // SHEET 2: Detalle de Movimientos
   // ==========================================
-  const ws2 = wb.addWorksheet('Detalle Movimientos', {
+  const ws2 = wb.addWorksheet('Detalle Ventas', {
     views: [{ showGridLines: false }],
   });
 
@@ -218,7 +218,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   }
   ws2.mergeCells('B1:M1');
   const t2 = ws2.getCell('B1');
-  t2.value = 'DETALLE DE MOVIMIENTOS';
+  t2.value = 'DETALLE DE VENTAS';
   t2.font = { size: 16, bold: true, color: WHITE };
   t2.alignment = { horizontal: 'center', vertical: 'middle' };
   ws2.getRow(1).height = 30;
@@ -335,5 +335,5 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   // ==========================================
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  saveAs(blob, `Reporte_Movimientos_${new Date().toISOString().split('T')[0]}.xlsx`);
+  saveAs(blob, `Reporte_Ventas_${new Date().toISOString().split('T')[0]}.xlsx`);
 }

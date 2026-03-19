@@ -122,7 +122,7 @@ export default function Reports() {
         </button>
         <button onClick={() => handleTabChange('movements')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'movements' ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
-          <BarChart3 className="w-4 h-4" /> Movimientos
+          <BarChart3 className="w-4 h-4" /> Ventas
         </button>
       </div>
 
@@ -247,14 +247,14 @@ export default function Reports() {
                 <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-xl flex items-center gap-2">
                   <span className="text-xs text-primary-700 font-medium">
                     Filtro activo: {filterResponsible && `Responsable: ${filterResponsible}`} {filterType && `Tipo: ${filterType === 'EXIT' ? 'Salidas' : 'Entradas'}`}
-                    {' '}({filteredMovements.length} de {movementsReport.movements.length} movimientos)
+                    {' '}({filteredMovements.length} de {movementsReport.movements.length} registros)
                   </span>
                 </div>
               )}
 
               {/* Movement Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-5">
-                <StatsCard title="Total Movimientos" value={filteredSummary.totalMovements} icon={<BarChart3 className="w-6 h-6" />} color="purple" />
+                <StatsCard title="Total Registros" value={filteredSummary.totalMovements} icon={<BarChart3 className="w-6 h-6" />} color="purple" />
                 <StatsCard title="Entradas" value={filteredSummary.totalEntries} icon={<ArrowDownToLine className="w-6 h-6" />} color="green" subtitle={`${filteredSummary.totalEntryQuantity} unidades`} />
                 <StatsCard title="Salidas" value={filteredSummary.totalExits} icon={<ArrowUpFromLine className="w-6 h-6" />} color="red" subtitle={`${filteredSummary.totalExitQuantity} unidades`} />
                 <StatsCard title="Balance Neto" value={filteredSummary.totalEntryQuantity - filteredSummary.totalExitQuantity} icon={<Package className="w-6 h-6" />} color="blue" subtitle="Diferencia E/S" />
@@ -308,7 +308,7 @@ export default function Reports() {
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                   <h3 className="text-base font-bold text-gray-800">
-                    Movimientos del {new Date(dateRange.startDate).toLocaleDateString('es-CO')} al {new Date(dateRange.endDate).toLocaleDateString('es-CO')}
+                    Reporte de Ventas del {new Date(dateRange.startDate).toLocaleDateString('es-CO')} al {new Date(dateRange.endDate).toLocaleDateString('es-CO')}
                   </h3>
                   <button
                     onClick={() => exportMovementsReport({ ...movementsReport, movements: filteredMovements, summary: filteredSummary! }, company?.name || undefined)}
