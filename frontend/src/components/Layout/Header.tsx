@@ -289,27 +289,16 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <form onSubmit={async (e) => {
             e.preventDefault();
             try {
-              const formData = new FormData();
-              formData.append('name', superAdminForm.name);
-              formData.append('email', superAdminForm.email);
-              if (avatarFile) formData.append('avatar', avatarFile);
-
-              const token = localStorage.getItem('wms_token');
-              const res = await fetch('/api/auth/profile', {
-                method: 'PUT',
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
-                body: formData,
-              });
-              const text = await res.text();
-              let data: any;
-              try { data = JSON.parse(text); } catch { throw new Error('Error al guardar. Intenta de nuevo.'); }
-              if (!res.ok) throw new Error(data.message);
-
-              const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email, avatarUrl: data.data?.avatarUrl || (user as any)?.avatarUrl };
+              const res = await authApi.updateProfile(
+                { name: superAdminForm.name, email: superAdminForm.email },
+                avatarFile || undefined
+              );
+              const avatarUrl = res?.data?.avatarUrl || (user as any)?.avatarUrl || null;
+              const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email, avatarUrl };
               localStorage.setItem('wms_user', JSON.stringify(updated));
               setShowProfile(false);
               window.location.reload();
-            } catch (err: any) { alert(err.message); }
+            } catch (err: any) { alert(err.message || 'Error al guardar'); }
           }} className="space-y-4">
             <div className="flex flex-col items-center">
               <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
