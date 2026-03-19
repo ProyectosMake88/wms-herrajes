@@ -57,17 +57,32 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
   // Load avatar from DB on mount
   useEffect(() => {
-    const token = localStorage.getItem('wms_token');
-    if (token) {
-      fetch('/api/auth/profile', { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json())
-        .then(d => {
-          if (d?.data?.avatarUrl) setCurrentAvatarUrl(d.data.avatarUrl);
-          // Also update localStorage with fresh data
-          if (d?.data) localStorage.setItem('wms_user', JSON.stringify(d.data));
-        })
-        .catch(() => {});
+    async function loadAvatar() {
+      try {
+        const tk = localStorage.getItem('wms_token');
+        if (!tk) return;
+        const resp = await fetch('/api/auth/profile', { headers: { 'Authorization': 'Bearer ' + tk } });
+        const text = await resp.text();
+        const json = JSON.parse(text);
+        if (json?.data?.avatarUrl) {
+          setCurrentAvatarUrl(json.data.avatarUrl);
+        }
+        if (json?.data) {
+          localStorage.setItem('wms_user', JSON.stringify(json.data));
+          // If role changed (e.g. upgraded to SUPER_ADMIN), force re-login
+          const savedUser = localStorage.getItem('wms_user');
+          if (savedUser) {
+            const parsed = JSON.parse(savedUser);
+            if (parsed.role !== user?.role) {
+              window.location.reload();
+            }
+          }
+        }
+      } catch (e) {
+        // silent
+      }
     }
+    loadAvatar();
   }, []);
   const { company, reload: reloadCompany } = useCompany();
   const navigate = useNavigate();
