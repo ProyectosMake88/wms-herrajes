@@ -201,7 +201,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   // ==========================================
   // SHEET 2: Detalle de Movimientos
   // ==========================================
-  const ws2 = wb.addWorksheet('Detalle Ventas', {
+  const ws2 = wb.addWorksheet('Detalle Ventas - Registro Inv.', {
     views: [{ showGridLines: false }],
   });
 
@@ -218,7 +218,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   }
   ws2.mergeCells('B1:M1');
   const t2 = ws2.getCell('B1');
-  t2.value = 'DETALLE DE VENTAS';
+  t2.value = 'DETALLE VENTAS / REGISTRO INVENTARIO';
   t2.font = { size: 16, bold: true, color: WHITE };
   t2.alignment = { horizontal: 'center', vertical: 'middle' };
   ws2.getRow(1).height = 30;
