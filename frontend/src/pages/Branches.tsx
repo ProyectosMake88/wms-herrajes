@@ -42,6 +42,10 @@ export default function Branches() {
   const [showEditProduct, setShowEditProduct] = useState(false);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
 
+  // Add product to branch
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [addProductForm, setAddProductForm] = useState({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT' as UnitOfMeasure, currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '' });
+
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
@@ -160,6 +164,26 @@ export default function Branches() {
     }
   }
 
+  async function handleAddProduct(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedBranch) return;
+    try {
+      await productApi.create({
+        ...addProductForm,
+        categoryId: Number(addProductForm.categoryId),
+        branchId: selectedBranch.id,
+        currentStock: Number(addProductForm.currentStock),
+        minimumStock: Number(addProductForm.minimumStock),
+        cost: addProductForm.cost ? Number(addProductForm.cost) : undefined,
+        price: addProductForm.price ? Number(addProductForm.price) : undefined,
+      });
+      setShowAddProduct(false);
+      openBranchDetail(selectedBranch);
+    } catch (error: any) {
+      alert(error.message);
+    }
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-96"><div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>;
   }
@@ -232,6 +256,14 @@ export default function Branches() {
             </div>
           </div>
         )}
+
+        {/* Add Product Button */}
+        <div className="flex justify-end mb-4">
+          <button onClick={() => { setShowAddProduct(true); setAddProductForm({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '' }); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">
+            <Plus className="w-4 h-4" /> Agregar Producto a esta Sede
+          </button>
+        </div>
 
         {/* Products Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -446,6 +478,86 @@ export default function Branches() {
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition">Cancelar</button>
               <button type="submit" className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">Guardar</button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Add Product Modal */}
+        <Modal isOpen={showAddProduct} onClose={() => setShowAddProduct(false)} title={`Agregar Producto a ${selectedBranch?.name}`} maxWidth="max-w-xl">
+          <form onSubmit={handleAddProduct} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <input required value={addProductForm.name} onChange={(e) => setAddProductForm({ ...addProductForm, name: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
+                <input required value={addProductForm.sku} onChange={(e) => setAddProductForm({ ...addProductForm, sku: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+              <input value={addProductForm.description} onChange={(e) => setAddProductForm({ ...addProductForm, description: e.target.value })}
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
+                <select required value={addProductForm.categoryId} onChange={(e) => setAddProductForm({ ...addProductForm, categoryId: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none">
+                  <option value="">Seleccionar...</option>
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Unidad de Medida *</label>
+                <select value={addProductForm.unitOfMeasure} onChange={(e) => setAddProductForm({ ...addProductForm, unitOfMeasure: e.target.value as UnitOfMeasure })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none">
+                  {Object.entries(UNIT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stock Inicial</label>
+                <input type="number" min="0" value={addProductForm.currentStock} onChange={(e) => setAddProductForm({ ...addProductForm, currentStock: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo</label>
+                <input type="number" min="0" value={addProductForm.minimumStock} onChange={(e) => setAddProductForm({ ...addProductForm, minimumStock: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                <input value={addProductForm.warehouseLocation} onChange={(e) => setAddProductForm({ ...addProductForm, warehouseLocation: e.target.value })}
+                  placeholder="Pasillo A, Estante 1"
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                  <input type="number" min="0" step="0.01" value={addProductForm.cost} onChange={(e) => setAddProductForm({ ...addProductForm, cost: e.target.value })}
+                    className="w-full pl-7 pr-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Precio de Venta</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                  <input type="number" min="0" step="0.01" value={addProductForm.price} onChange={(e) => setAddProductForm({ ...addProductForm, price: e.target.value })}
+                    className="w-full pl-7 pr-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setShowAddProduct(false)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition">Cancelar</button>
+              <button type="submit" className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">Crear Producto</button>
             </div>
           </form>
         </Modal>
