@@ -24,7 +24,13 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     window.location.href = '/login';
     throw new Error('Sesión expirada');
   }
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('Error del servidor. Intenta de nuevo.');
+  }
   if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
   return data;
 }
@@ -41,7 +47,13 @@ async function requestFormData<T>(url: string, method: string, formData: FormDat
     window.location.href = '/login';
     throw new Error('Sesión expirada');
   }
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('Error del servidor. Intenta de nuevo.');
+  }
   if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
   return data;
 }

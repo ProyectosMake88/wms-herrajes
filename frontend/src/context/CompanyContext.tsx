@@ -32,9 +32,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   async function loadCompany() {
     try {
       const res = await companyApi.getProfile();
-      setCompany(res.data);
+      if (res?.data) setCompany(res.data);
     } catch {
-      // silently fail
+      // silently fail - super admin or no company yet
     }
   }
 
