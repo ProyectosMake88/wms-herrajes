@@ -42,7 +42,14 @@ export default function Branches() {
   const [showEditProduct, setShowEditProduct] = useState(false);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
 
-  // Add product to branch
+  // Assign product to branch
+  const [showAssignProduct, setShowAssignProduct] = useState(false);
+  const [orgProducts, setOrgProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [assignQuantity, setAssignQuantity] = useState('');
+  const [assignSearch, setAssignSearch] = useState('');
+
+  // Create new product in branch
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [addProductForm, setAddProductForm] = useState({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT' as UnitOfMeasure, currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '' });
 
@@ -164,6 +171,76 @@ export default function Branches() {
     }
   }
 
+  async function openAssignProduct() {
+    try {
+      // Get ALL products (from all branches and unassigned)
+      const res = await productApi.getAll();
+      // Filter: only products with stock > 0 that are NOT already in this branch
+      const branchProductIds = branchProducts.map(p => p.id);
+      const available = (res.data as Product[]).filter(p => p.currentStock > 0 && !branchProductIds.includes(p.id));
+      setOrgProducts(available);
+      setSelectedProductId('');
+      setAssignQuantity('');
+      setAssignSearch('');
+      setShowAssignProduct(true);
+    } catch (error) { console.error(error); }
+  }
+
+  async function handleAssignProduct(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedBranch || !selectedProductId || !assignQuantity) return;
+    const sourceProduct = orgProducts.find(p => p.id === Number(selectedProductId));
+    if (!sourceProduct) return;
+    const qty = Number(assignQuantity);
+    if (qty > sourceProduct.currentStock) { alert(`Stock insuficiente. Disponible: ${sourceProduct.currentStock}`); return; }
+
+    try {
+      // 1. Create new product in branch (copy of source)
+      await productApi.create({
+        name: sourceProduct.name,
+        sku: `${sourceProduct.sku}-${selectedBranch.code}`,
+        description: sourceProduct.description || '',
+        categoryId: sourceProduct.categoryId,
+        branchId: selectedBranch.id,
+        unitOfMeasure: sourceProduct.unitOfMeasure,
+        currentStock: qty,
+        minimumStock: sourceProduct.minimumStock,
+        warehouseLocation: '',
+        cost: sourceProduct.cost ? Number(sourceProduct.cost) : undefined,
+        price: sourceProduct.price ? Number(sourceProduct.price) : undefined,
+      });
+
+      // 2. Reduce source product stock via EXIT movement
+      await inventoryApi.registerMovement({
+        productId: sourceProduct.id,
+        type: 'EXIT',
+        quantity: qty,
+        reason: `Transferencia a sede ${selectedBranch.name}`,
+        responsible: 'Administrador',
+      });
+
+      setShowAssignProduct(false);
+      openBranchDetail(selectedBranch);
+    } catch (error: any) {
+      // If SKU already exists, just add stock to existing branch product
+      if (error.message?.includes('Unique constraint')) {
+        try {
+          const existing = branchProducts.find(p => p.name === sourceProduct.name);
+          if (existing) {
+            await inventoryApi.registerMovement({ productId: existing.id, type: 'ENTRY', quantity: qty, reason: `Transferencia desde inventario general`, responsible: 'Administrador' });
+            await inventoryApi.registerMovement({ productId: sourceProduct.id, type: 'EXIT', quantity: qty, reason: `Transferencia a sede ${selectedBranch.name}`, responsible: 'Administrador' });
+            setShowAssignProduct(false);
+            openBranchDetail(selectedBranch);
+          } else {
+            alert(error.message);
+          }
+        } catch (e2: any) { alert(e2.message); }
+      } else {
+        alert(error.message);
+      }
+    }
+  }
+
   async function handleAddProduct(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedBranch) return;
@@ -257,11 +334,15 @@ export default function Branches() {
           </div>
         )}
 
-        {/* Add Product Button */}
-        <div className="flex justify-end mb-4">
-          <button onClick={() => { setShowAddProduct(true); setAddProductForm({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '' }); }}
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 mb-4">
+          <button onClick={openAssignProduct}
             className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">
-            <Plus className="w-4 h-4" /> Agregar Producto a esta Sede
+            <Plus className="w-4 h-4" /> Asignar Producto del Inventario
+          </button>
+          <button onClick={() => { setShowAddProduct(true); setAddProductForm({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '' }); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
+            <Plus className="w-4 h-4" /> Crear Producto Nuevo
           </button>
         </div>
 
@@ -478,6 +559,98 @@ export default function Branches() {
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition">Cancelar</button>
               <button type="submit" className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">Guardar</button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Assign Product Modal */}
+        <Modal isOpen={showAssignProduct} onClose={() => setShowAssignProduct(false)} title={`Asignar Producto a ${selectedBranch?.name}`} maxWidth="max-w-2xl">
+          <form onSubmit={handleAssignProduct} className="space-y-4">
+            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+              <p className="text-xs text-blue-700 font-medium">Selecciona un producto del inventario general y asigna la cantidad que deseas enviar a esta sede. El stock del producto origen se reducirá automáticamente.</p>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar producto por nombre o SKU..."
+                value={assignSearch}
+                onChange={(e) => setAssignSearch(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none"
+              />
+            </div>
+
+            {/* Product list */}
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {orgProducts
+                .filter(p => !assignSearch || p.name.toLowerCase().includes(assignSearch.toLowerCase()) || p.sku.toLowerCase().includes(assignSearch.toLowerCase()))
+                .map(p => (
+                <div
+                  key={p.id}
+                  onClick={() => setSelectedProductId(String(p.id))}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition ${
+                    selectedProductId === String(p.id)
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-100 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-200" />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center"><Package className="w-5 h-5 text-gray-300" /></div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                    <p className="text-xs text-gray-500">{p.sku} · {p.category?.name} {p.branch ? `· Sede: ${p.branch.name}` : '· Sin sede'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">Disponible</p>
+                    <p className={`text-lg font-bold ${p.isLowStock ? 'text-amber-500' : 'text-emerald-600'}`}>{p.currentStock}</p>
+                  </div>
+                </div>
+              ))}
+              {orgProducts.filter(p => !assignSearch || p.name.toLowerCase().includes(assignSearch.toLowerCase()) || p.sku.toLowerCase().includes(assignSearch.toLowerCase())).length === 0 && (
+                <p className="text-center py-8 text-gray-400 text-sm">No hay productos disponibles para asignar</p>
+              )}
+            </div>
+
+            {/* Quantity */}
+            {selectedProductId && (() => {
+              const sp = orgProducts.find(p => p.id === Number(selectedProductId));
+              if (!sp) return null;
+              return (
+                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-bold text-gray-800">{sp.name}</p>
+                    <p className="text-xs text-gray-500">Stock disponible: <span className="font-bold text-emerald-600">{sp.currentStock}</span></p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-gray-400 font-medium uppercase">Origen</p>
+                      <p className="text-lg font-bold text-gray-800">{sp.currentStock}</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-gray-400 font-medium uppercase">Asignar</p>
+                      <input required type="number" min="1" max={sp.currentStock} value={assignQuantity} onChange={(e) => setAssignQuantity(e.target.value)}
+                        placeholder="0"
+                        className="w-full text-center text-lg font-bold text-primary-600 bg-transparent border-none focus:outline-none" />
+                    </div>
+                    <div className="bg-white rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-gray-400 font-medium uppercase">Quedará</p>
+                      <p className="text-lg font-bold text-amber-600">{sp.currentStock - (Number(assignQuantity) || 0)}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setShowAssignProduct(false)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition">Cancelar</button>
+              <button type="submit" disabled={!selectedProductId || !assignQuantity}
+                className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                Asignar a Sede
+              </button>
             </div>
           </form>
         </Modal>
