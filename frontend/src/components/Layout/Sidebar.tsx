@@ -1,10 +1,15 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Tags, ArrowLeftRight, BarChart3,
-  AlertTriangle, Warehouse, Users, ShoppingBag, LogOut, ClipboardCheck, MapPin,
+  AlertTriangle, Warehouse, Users, ShoppingBag, LogOut, ClipboardCheck, MapPin, Building2, Crown,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
+
+const superAdminNav = [
+  { to: '/', icon: Crown, label: 'Panel Global' },
+  { to: '/organizations', icon: Building2, label: 'Organizaciones' },
+];
 
 const adminNav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -25,9 +30,9 @@ const sellerNav = [
 ];
 
 export default function Sidebar() {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, isSuperAdmin, logout } = useAuth();
   const { company } = useCompany();
-  const navItems = isAdmin ? adminNav : sellerNav;
+  const navItems = isSuperAdmin ? superAdminNav : isAdmin ? adminNav : sellerNav;
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-primary-700 via-primary-800 to-primary-900 text-white flex flex-col z-50">
@@ -49,7 +54,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         <p className="px-4 text-[10px] text-primary-300 uppercase font-semibold tracking-wider mb-2">
-          {isAdmin ? 'Administración' : 'Ventas'}
+          {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administración' : 'Ventas'}
         </p>
         {navItems.map((item) => (
           <NavLink
@@ -79,7 +84,7 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-              <p className="text-[10px] text-primary-300">{isAdmin ? 'Administrador' : 'Vendedor'}</p>
+              <p className="text-[10px] text-primary-300">{isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrador' : 'Vendedor'}</p>
             </div>
           </div>
         </div>

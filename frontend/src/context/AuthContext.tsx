@@ -4,12 +4,15 @@ interface User {
   id: number;
   email: string;
   name: string;
-  role: 'ADMIN' | 'SELLER';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'SELLER';
+  organizationId: number | null;
+  branchId?: number | null;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  isSuperAdmin: boolean;
   isAdmin: boolean;
   isSeller: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -61,7 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         token,
-        isAdmin: user?.role === 'ADMIN',
+        isSuperAdmin: user?.role === 'SUPER_ADMIN',
+        isAdmin: user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN',
         isSeller: user?.role === 'SELLER',
         login,
         logout,

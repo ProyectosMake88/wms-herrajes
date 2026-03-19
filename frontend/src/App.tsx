@@ -13,6 +13,7 @@ import Users from './pages/Users';
 import SellerSales from './pages/SellerSales';
 import Approvals from './pages/Approvals';
 import Branches from './pages/Branches';
+import Organizations from './pages/Organizations';
 import RequestEntry from './pages/RequestEntry';
 import { ReactNode } from 'react';
 
@@ -29,19 +30,28 @@ function AdminRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function SuperAdminRoute({ children }: { children: ReactNode }) {
+  const { isSuperAdmin } = useAuth();
+  if (!isSuperAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin } = useAuth();
 
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        {/* Home: Dashboard para admin, SellerSales para vendedor */}
-        <Route index element={isAdmin ? <Dashboard /> : <SellerSales />} />
+        {/* Home: Organizations para super admin, Dashboard para admin, SellerSales para vendedor */}
+        <Route index element={isSuperAdmin ? <Organizations /> : isAdmin ? <Dashboard /> : <SellerSales />} />
         <Route path="products" element={<Products />} />
 
         {/* Vendedor */}
         <Route path="request-entry" element={<RequestEntry />} />
+
+        {/* Solo super admin */}
+        <Route path="organizations" element={<SuperAdminRoute><Organizations /></SuperAdminRoute>} />
 
         {/* Solo admin */}
         <Route path="categories" element={<AdminRoute><Categories /></AdminRoute>} />

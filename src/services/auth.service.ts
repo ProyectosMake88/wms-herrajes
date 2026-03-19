@@ -11,6 +11,7 @@ interface RegisterDTO {
   password: string;
   name: string;
   role?: UserRole;
+  organizationId?: number;
   branchId?: number;
 }
 
@@ -31,6 +32,7 @@ export class AuthService {
         password: hashedPassword,
         name: data.name,
         role: data.role || UserRole.SELLER,
+        organizationId: data.organizationId || null,
         branchId: data.branchId || null,
       },
       select: { id: true, email: true, name: true, role: true, branchId: true, isActive: true, createdAt: true },
@@ -51,14 +53,14 @@ export class AuthService {
     if (!validPassword) throw new Error('Credenciales inválidas');
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, name: user.name, branchId: user.branchId },
+      { id: user.id, email: user.email, role: user.role, name: user.name, organizationId: user.organizationId, branchId: user.branchId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
 
     return {
       token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, branchId: user.branchId, branch: user.branch },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, organizationId: user.organizationId, branchId: user.branchId, branch: user.branch },
     };
   }
 
@@ -89,18 +91,19 @@ export class AuthService {
    * Crea el admin por defecto si no existe ningún usuario
    */
   async seedAdmin() {
-    const count = await prisma.user.count();
-    if (count === 0) {
+    // Crear Super Admin si no existe ninguno
+    const superAdmin = await prisma.user.findFirst({ where: { role: UserRole.SUPER_ADMIN } });
+    if (!superAdmin) {
       const hashedPassword = await bcrypt.hash('Juankp88', 10);
       await prisma.user.create({
         data: {
           email: 'gerencia@makead.com.co',
           password: hashedPassword,
-          name: 'Gerencia',
-          role: UserRole.ADMIN,
+          name: 'Super Admin',
+          role: UserRole.SUPER_ADMIN,
         },
       });
-      console.log('👤 Usuario admin creado: gerencia@makead.com.co');
+      console.log('👑 Super Admin creado: gerencia@makead.com.co');
     }
   }
 }

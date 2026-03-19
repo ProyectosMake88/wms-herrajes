@@ -148,6 +148,16 @@ export const companyApi = {
   },
 };
 
+// Organizations (Super Admin)
+export const organizationApi = {
+  getAll: () => request<any>('/organizations'),
+  getById: (id: number) => request<any>(`/organizations/${id}`),
+  getStats: () => request<any>('/organizations/stats'),
+  create: (data: any) => request<any>('/organizations', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => request<any>(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  toggleActive: (id: number) => request<any>(`/organizations/${id}/toggle`, { method: 'PUT' }),
+};
+
 // Branches
 export const branchApi = {
   getAll: () => request<any>('/branches'),

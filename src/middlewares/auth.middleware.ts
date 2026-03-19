@@ -10,14 +10,11 @@ export interface AuthRequest extends Request {
     email: string;
     role: UserRole;
     name: string;
+    organizationId: number | null;
     branchId: number | null;
   };
 }
 
-/**
- * Middleware que verifica el token JWT.
- * Todas las rutas protegidas deben usar este middleware.
- */
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
@@ -34,21 +31,23 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 }
 
-/**
- * Middleware que restringe el acceso solo a administradores.
- * Debe usarse DESPUÉS de authMiddleware.
- */
+/** Solo SUPER_ADMIN (dueño de la plataforma) */
+export function superAdminOnly(req: AuthRequest, res: Response, next: NextFunction) {
+  if (req.user?.role !== UserRole.SUPER_ADMIN) {
+    return res.status(403).json({ success: false, message: 'Acceso denegado. Se requiere rol de Super Administrador' });
+  }
+  next();
+}
+
+/** ADMIN de organización o SUPER_ADMIN */
 export function adminOnly(req: AuthRequest, res: Response, next: NextFunction) {
-  if (req.user?.role !== UserRole.ADMIN) {
+  if (req.user?.role !== UserRole.ADMIN && req.user?.role !== UserRole.SUPER_ADMIN) {
     return res.status(403).json({ success: false, message: 'Acceso denegado. Se requiere rol de administrador' });
   }
   next();
 }
 
-/**
- * Middleware que permite solo registrar salidas para vendedores.
- * Admins pueden registrar cualquier tipo de movimiento.
- */
+/** Vendedores solo pueden registrar salidas */
 export function sellerExitOnly(req: AuthRequest, res: Response, next: NextFunction) {
   if (req.user?.role === UserRole.SELLER && req.body.type !== 'EXIT') {
     return res.status(403).json({
