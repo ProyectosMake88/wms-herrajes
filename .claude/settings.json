@@ -8,7 +8,11 @@
       "Bash(gh repo:*)",
       "Bash(node -e \"console.log\\(encodeURIComponent\\(''[Tokio880819.]''\\)\\)\")",
       "Bash(node -e \":*)",
-      "Bash(nslookup db.zliucfhrjptpphnhzpzl.supabase.co 8.8.8.8)"
+      "Bash(nslookup db.zliucfhrjptpphnhzpzl.supabase.co 8.8.8.8)",
+      "Bash(node -e \"const{PrismaClient}=require\\(''@prisma/client''\\);const p=new PrismaClient\\(\\);p.user.findUnique\\({where:{id:1}}\\).then\\(u=>{console.log\\(''avatarUrl:'',u.avatarUrl\\);p.$disconnect\\(\\);}\\)\")",
+      "Bash(__NEW_LINE_0cc9d392275df48d__ echo:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/uploads/avatars/avatar-1773955755053.png)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/uploads/avatars/avatar-1773955755053.png)"
     ]
   }
 }

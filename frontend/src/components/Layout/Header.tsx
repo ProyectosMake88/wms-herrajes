@@ -57,16 +57,18 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
   // Load avatar from DB on mount
   useEffect(() => {
-    if (isSuperAdmin) {
-      const token = localStorage.getItem('wms_token');
-      if (token) {
-        fetch('/api/auth/profile', { headers: { Authorization: `Bearer ${token}` } })
-          .then(r => r.json())
-          .then(d => { if (d?.data?.avatarUrl) setCurrentAvatarUrl(d.data.avatarUrl); })
-          .catch(() => {});
-      }
+    const token = localStorage.getItem('wms_token');
+    if (token) {
+      fetch('/api/auth/profile', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => {
+          if (d?.data?.avatarUrl) setCurrentAvatarUrl(d.data.avatarUrl);
+          // Also update localStorage with fresh data
+          if (d?.data) localStorage.setItem('wms_user', JSON.stringify(d.data));
+        })
+        .catch(() => {});
     }
-  }, [isSuperAdmin]);
+  }, []);
   const { company, reload: reloadCompany } = useCompany();
   const navigate = useNavigate();
 
@@ -280,7 +282,9 @@ export default function Header({ title, subtitle }: HeaderProps) {
               onClick={openProfile}
               className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-sm hover:bg-gray-50 transition cursor-pointer"
             >
-              {company?.logoUrl ? (
+              {currentAvatarUrl ? (
+                <img src={currentAvatarUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+              ) : company?.logoUrl ? (
                 <img src={company.logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
               ) : (
                 <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
