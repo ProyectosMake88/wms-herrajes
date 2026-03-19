@@ -12,79 +12,175 @@ import StatsCard from '../components/ui/StatsCard';
 import { reportApi } from '../services/api';
 import { StockReport, MovementsReport } from '../types';
 
+function fmt(n: number) { return '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 2 }); }
+
+function buildBarChartSVG(data: { label: string; value: number; color: string }[], width = 600, height = 200) {
+  if (!data.length) return '';
+  const max = Math.max(...data.map(d => d.value)) || 1;
+  const barW = Math.min(50, (width - 80) / data.length - 10);
+  const chartH = height - 50;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="font-family:Calibri,sans-serif;">`;
+  svg += `<rect width="${width}" height="${height}" fill="white" rx="12"/>`;
+  // Grid lines
+  for (let i = 0; i <= 4; i++) {
+    const y = 20 + (chartH / 4) * i;
+    svg += `<line x1="60" y1="${y}" x2="${width - 20}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/>`;
+    svg += `<text x="55" y="${y + 4}" fill="#9ca3af" font-size="9" text-anchor="end">${fmt(max - (max / 4) * i)}</text>`;
+  }
+  // Bars
+  data.forEach((d, i) => {
+    const barH = (d.value / max) * chartH;
+    const x = 70 + i * ((width - 90) / data.length);
+    const y = 20 + chartH - barH;
+    svg += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${d.color}" rx="4"/>`;
+    svg += `<text x="${x + barW / 2}" y="${20 + chartH + 14}" fill="#6b7280" font-size="8" text-anchor="middle">${d.label.substring(0, 10)}</text>`;
+  });
+  svg += '</svg>';
+  return svg;
+}
+
+function buildPieChartSVG(data: { label: string; value: number; color: string }[], size = 200) {
+  const total = data.reduce((s, d) => s + d.value, 0) || 1;
+  const cx = size / 2, cy = size / 2, r = size * 0.35, ir = size * 0.2;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size + 160}" height="${size}" style="font-family:Calibri,sans-serif;">`;
+  svg += `<rect width="${size + 160}" height="${size}" fill="white" rx="12"/>`;
+  let angle = -Math.PI / 2;
+  data.forEach((d, i) => {
+    const a = (d.value / total) * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(angle + a), y2 = cy + r * Math.sin(angle + a);
+    const ix1 = cx + ir * Math.cos(angle), iy1 = cy + ir * Math.sin(angle);
+    const ix2 = cx + ir * Math.cos(angle + a), iy2 = cy + ir * Math.sin(angle + a);
+    const large = a > Math.PI ? 1 : 0;
+    svg += `<path d="M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix2},${iy2} A${ir},${ir} 0 ${large} 0 ${ix1},${iy1}" fill="${d.color}"/>`;
+    // Legend
+    const ly = 20 + i * 22;
+    svg += `<rect x="${size + 10}" y="${ly}" width="10" height="10" rx="2" fill="${d.color}"/>`;
+    svg += `<text x="${size + 26}" y="${ly + 9}" fill="#374151" font-size="10">${d.label.substring(0, 15)} (${d.value})</text>`;
+    angle += a;
+  });
+  svg += '</svg>';
+  return svg;
+}
+
 function exportToXlsx(report: MovementsReport) {
   const s = report.summary;
-  // Build XML Spreadsheet (compatible with Excel)
-  const rows = report.movements.map((m: any) => {
+  const movements = report.movements;
+
+  const rows = movements.map((m: any) => {
     const saleTotal = m.saleTotal ? Number(m.saleTotal) : 0;
     const costTotal = m.product?.cost ? Number(m.product.cost) * m.quantity : 0;
     const profit = m.type === 'EXIT' ? saleTotal - costTotal : 0;
-    return {
-      Tipo: m.type === 'ENTRY' ? 'Entrada' : 'Salida',
-      Producto: m.product?.name || '',
-      SKU: m.product?.sku || '',
-      Cantidad: m.quantity,
-      'Venta Total': m.type === 'EXIT' ? saleTotal : '',
-      'Costo Total': m.type === 'EXIT' ? costTotal : '',
-      Utilidad: m.type === 'EXIT' ? profit : '',
-      Motivo: m.reason,
-      Responsable: m.responsible,
-      Fecha: new Date(m.createdAt).toLocaleDateString('es-CO'),
-    };
+    return { type: m.type, product: m.product?.name || '', sku: m.product?.sku || '', quantity: m.quantity, saleTotal, costTotal, profit, reason: m.reason, responsible: m.responsible, date: new Date(m.createdAt).toLocaleDateString('es-CO') };
   });
 
-  // Build HTML table for Excel
-  const headers = Object.keys(rows[0] || {});
+  // Aggregate by responsible
+  const byResponsible = new Map<string, { sales: number; revenue: number; cost: number; profit: number }>();
+  rows.filter(r => r.type === 'EXIT').forEach(r => {
+    const ex = byResponsible.get(r.responsible) || { sales: 0, revenue: 0, cost: 0, profit: 0 };
+    ex.sales += r.quantity; ex.revenue += r.saleTotal; ex.cost += r.costTotal; ex.profit += r.profit;
+    byResponsible.set(r.responsible, ex);
+  });
+
+  // Aggregate by product
+  const byProduct = new Map<string, { quantity: number; revenue: number }>();
+  rows.filter(r => r.type === 'EXIT').forEach(r => {
+    const ex = byProduct.get(r.product) || { quantity: 0, revenue: 0 };
+    ex.quantity += r.quantity; ex.revenue += r.saleTotal;
+    byProduct.set(r.product, ex);
+  });
+
+  const colors = ['#7c3aed', '#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
+
+  // Revenue bar chart by responsible
+  const respData = Array.from(byResponsible.entries()).sort((a, b) => b[1].revenue - a[1].revenue).map((e, i) => ({ label: e[0], value: e[1].revenue, color: colors[i % colors.length] }));
+  const revenueChart = buildBarChartSVG(respData, 580, 180);
+
+  // Pie chart by product
+  const prodData = Array.from(byProduct.entries()).sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 8).map((e, i) => ({ label: e[0], value: e[1].revenue, color: colors[i % colors.length] }));
+  const pieChart = buildPieChartSVG(prodData, 180);
+
   let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-<head><meta charset="UTF-8">
-<style>
-  table { border-collapse: collapse; font-family: Calibri, sans-serif; }
-  th { background-color: #5b21b6; color: white; font-weight: bold; padding: 10px 14px; font-size: 12px; text-align: center; }
-  td { padding: 8px 12px; border: 1px solid #e5e7eb; font-size: 11px; text-align: center; }
-  tr:nth-child(even) { background-color: #f5f3ff; }
-  .title { font-size: 18px; font-weight: bold; color: #5b21b6; padding: 10px; }
-  .subtitle { font-size: 12px; color: #6b7280; padding: 4px 10px; }
-  .summary-label { font-weight: bold; padding: 6px 12px; text-align: right; background: #f9fafb; }
-  .summary-value { font-weight: bold; padding: 6px 12px; font-size: 13px; }
-  .green { color: #059669; }
-  .red { color: #dc2626; }
-  .blue { color: #2563eb; }
-  .amber { color: #d97706; }
+<head><meta charset="UTF-8"><style>
+  body { font-family: Calibri, sans-serif; margin: 0; padding: 20px; background: #f8f7fc; }
+  .header { background: linear-gradient(135deg, #5b21b6, #7c3aed); color: white; padding: 24px 30px; border-radius: 16px; margin-bottom: 20px; }
+  .header h1 { margin: 0; font-size: 22px; } .header p { margin: 4px 0 0; font-size: 12px; opacity: 0.8; }
+  .cards { display: flex; gap: 12px; margin-bottom: 20px; }
+  .card { flex: 1; background: white; border-radius: 14px; padding: 16px 20px; border: 1px solid #e5e7eb; }
+  .card-label { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
+  .card-value { font-size: 22px; font-weight: bold; }
+  .card-sub { font-size: 10px; margin-top: 2px; }
+  .purple { color: #7c3aed; } .green { color: #059669; } .red { color: #dc2626; } .blue { color: #2563eb; } .amber { color: #d97706; }
+  .section { background: white; border-radius: 14px; padding: 20px; border: 1px solid #e5e7eb; margin-bottom: 16px; }
+  .section h3 { margin: 0 0 14px; font-size: 14px; color: #1f2937; }
+  table { border-collapse: collapse; width: 100%; font-size: 11px; }
+  th { background: #5b21b6; color: white; padding: 10px 12px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: center; }
+  tr:nth-child(even) { background: #f5f3ff; }
+  .badge-entry { background: #d1fae5; color: #059669; padding: 3px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+  .badge-exit { background: #fee2e2; color: #dc2626; padding: 3px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+  .chart-row { display: flex; gap: 16px; margin-bottom: 16px; }
+  .chart-box { flex: 1; background: white; border-radius: 14px; padding: 16px; border: 1px solid #e5e7eb; }
+  .chart-box h4 { margin: 0 0 10px; font-size: 13px; color: #1f2937; }
+  .resp-table th { background: #3b82f6; }
+  .footer { text-align: center; font-size: 10px; color: #9ca3af; margin-top: 20px; padding: 10px; }
 </style></head><body>`;
 
-  // Title
-  html += `<div class="title">Reporte de Movimientos - WMS Herrajes</div>`;
-  html += `<div class="subtitle">Período: ${new Date(s.dateRange.from).toLocaleDateString('es-CO')} al ${new Date(s.dateRange.to).toLocaleDateString('es-CO')}</div><br/>`;
+  // Header
+  html += `<div class="header"><h1>Reporte de Movimientos</h1><p>WMS Herrajes - Sistema de Inventarios &nbsp;|&nbsp; Período: ${new Date(s.dateRange.from).toLocaleDateString('es-CO')} al ${new Date(s.dateRange.to).toLocaleDateString('es-CO')} &nbsp;|&nbsp; Generado: ${new Date().toLocaleDateString('es-CO')}</p></div>`;
 
-  // Summary table
-  html += `<table><tr><td class="summary-label">Total Movimientos:</td><td class="summary-value">${s.totalMovements}</td>`;
-  html += `<td class="summary-label">Entradas:</td><td class="summary-value green">${s.totalEntries} (${s.totalEntryQuantity} uds)</td></tr>`;
-  html += `<tr><td class="summary-label">Salidas:</td><td class="summary-value red">${s.totalExits} (${s.totalExitQuantity} uds)</td>`;
-  html += `<td class="summary-label">Ingresos por Ventas:</td><td class="summary-value blue">$${s.totalSaleRevenue.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td></tr>`;
-  html += `<tr><td class="summary-label">Costo de Adquisición:</td><td class="summary-value amber">$${s.totalCostOfSales.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>`;
-  html += `<td class="summary-label">Utilidad Neta:</td><td class="summary-value ${s.totalProfit >= 0 ? 'green' : 'red'}">$${s.totalProfit.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td></tr>`;
-  html += `<tr><td class="summary-label">Margen de Ganancia:</td><td class="summary-value ${s.profitMargin >= 0 ? 'green' : 'red'}">${s.profitMargin.toFixed(1)}%</td>`;
-  html += `<td></td><td></td></tr></table><br/>`;
+  // Summary Cards Row 1
+  html += `<div class="cards">
+    <div class="card"><div class="card-label">Total Movimientos</div><div class="card-value purple">${s.totalMovements}</div></div>
+    <div class="card"><div class="card-label">Entradas</div><div class="card-value green">${s.totalEntries}</div><div class="card-sub green">${s.totalEntryQuantity} unidades</div></div>
+    <div class="card"><div class="card-label">Salidas</div><div class="card-value red">${s.totalExits}</div><div class="card-sub red">${s.totalExitQuantity} unidades</div></div>
+    <div class="card"><div class="card-label">Balance Neto</div><div class="card-value blue">${s.totalEntryQuantity - s.totalExitQuantity}</div></div>
+  </div>`;
 
-  // Data table
-  html += '<table><thead><tr>';
-  headers.forEach((h) => { html += `<th>${h}</th>`; });
-  html += '</tr></thead><tbody>';
-  rows.forEach((row: any) => {
-    html += '<tr>';
-    headers.forEach((h) => {
-      const val = row[h];
-      const isNum = typeof val === 'number';
-      const isMoney = ['Venta Total', 'Costo Total', 'Utilidad'].includes(h) && val !== '';
-      let cls = '';
-      if (h === 'Utilidad' && val !== '') cls = Number(val) >= 0 ? 'green' : 'red';
-      if (h === 'Venta Total') cls = 'blue';
-      if (h === 'Costo Total') cls = 'amber';
-      html += `<td class="${cls}">${isMoney ? '$' + Number(val).toLocaleString('es-CO', { minimumFractionDigits: 2 }) : val}</td>`;
+  // Financial Cards Row 2
+  html += `<div class="cards">
+    <div class="card"><div class="card-label">Ingresos por Ventas</div><div class="card-value blue">${fmt(s.totalSaleRevenue)}</div></div>
+    <div class="card"><div class="card-label">Costo de Adquisición</div><div class="card-value amber">${fmt(s.totalCostOfSales)}</div></div>
+    <div class="card"><div class="card-label">Utilidad Neta</div><div class="card-value ${s.totalProfit >= 0 ? 'green' : 'red'}">${fmt(s.totalProfit)}</div></div>
+    <div class="card"><div class="card-label">Margen de Ganancia</div><div class="card-value ${s.profitMargin >= 0 ? 'green' : 'red'}">${s.profitMargin.toFixed(1)}%</div></div>
+  </div>`;
+
+  // Charts
+  html += `<div class="chart-row">`;
+  html += `<div class="chart-box"><h4>Ventas por Responsable</h4>${revenueChart}</div>`;
+  html += `<div class="chart-box"><h4>Ventas por Producto</h4>${pieChart}</div>`;
+  html += `</div>`;
+
+  // Responsible breakdown table
+  if (byResponsible.size > 0) {
+    html += `<div class="section"><h3>Resumen por Vendedor</h3><table class="resp-table"><thead><tr>
+      <th>Responsable</th><th>Uds. Vendidas</th><th>Ingresos</th><th>Costo</th><th>Utilidad</th><th>Margen</th>
+    </tr></thead><tbody>`;
+    Array.from(byResponsible.entries()).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([name, d]) => {
+      const margin = d.revenue > 0 ? (d.profit / d.revenue * 100).toFixed(1) : '0.0';
+      html += `<tr><td style="font-weight:bold;text-align:left">${name}</td><td>${d.sales}</td><td class="blue">${fmt(d.revenue)}</td><td class="amber">${fmt(d.cost)}</td><td class="${d.profit >= 0 ? 'green' : 'red'}">${fmt(d.profit)}</td><td class="${d.profit >= 0 ? 'green' : 'red'}">${margin}%</td></tr>`;
     });
-    html += '</tr>';
+    html += `</tbody></table></div>`;
+  }
+
+  // Full movements table
+  html += `<div class="section"><h3>Detalle de Movimientos</h3><table><thead><tr>
+    <th>Tipo</th><th>Producto</th><th>SKU</th><th>Cant.</th><th>Venta Total</th><th>Costo Total</th><th>Utilidad</th><th>Motivo</th><th>Responsable</th><th>Fecha</th>
+  </tr></thead><tbody>`;
+  rows.forEach(r => {
+    const badge = r.type === 'ENTRY' ? '<span class="badge-entry">Entrada</span>' : '<span class="badge-exit">Salida</span>';
+    html += `<tr>
+      <td>${badge}</td><td style="font-weight:600">${r.product}</td><td style="font-family:monospace;color:#7c3aed">${r.sku}</td><td style="font-weight:bold">${r.quantity}</td>
+      <td class="blue">${r.type === 'EXIT' && r.saleTotal ? fmt(r.saleTotal) : '—'}</td>
+      <td class="amber">${r.type === 'EXIT' && r.costTotal ? fmt(r.costTotal) : '—'}</td>
+      <td class="${r.profit >= 0 ? 'green' : 'red'}">${r.type === 'EXIT' ? fmt(r.profit) : '—'}</td>
+      <td>${r.reason}</td><td>${r.responsible}</td><td>${r.date}</td>
+    </tr>`;
   });
-  html += '</tbody></table></body></html>';
+  html += `</tbody></table></div>`;
+
+  html += `<div class="footer">WMS Herrajes - Sistema de Gestión de Inventarios &nbsp;|&nbsp; Reporte generado automáticamente</div>`;
+  html += '</body></html>';
 
   const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
   const url = URL.createObjectURL(blob);
