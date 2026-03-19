@@ -51,6 +51,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const { user, isAdmin, isSuperAdmin } = useAuth();
   const [superAdminForm, setSuperAdminForm] = useState({ name: '', email: '' });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const avatarFileRef = useRef<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(() => {
     try {
@@ -335,13 +336,21 @@ export default function Header({ title, subtitle }: HeaderProps) {
               const fd = new FormData();
               fd.append('name', superAdminForm.name);
               fd.append('email', superAdminForm.email);
-              if (avatarFile) fd.append('avatar', avatarFile);
+              const fileToUpload = avatarFileRef.current || avatarFile;
+              if (fileToUpload) {
+                fd.append('avatar', fileToUpload);
+              }
 
-              await fetch('/api/auth/profile', {
+              const saveRes = await fetch('/api/auth/profile', {
                 method: 'PUT',
                 headers: { 'Authorization': 'Bearer ' + tk },
                 body: fd,
               });
+
+              if (!saveRes.ok) {
+                const errText = await saveRes.text();
+                console.error('Save failed:', saveRes.status, errText);
+              }
 
               // 2. Re-fetch fresh data
               const profileRes = await fetch('/api/auth/profile', {
@@ -364,6 +373,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 setAvatarFile(file);
+                avatarFileRef.current = file;
                 const reader = new FileReader();
                 reader.onloadend = () => setAvatarPreview(reader.result as string);
                 reader.readAsDataURL(file);
