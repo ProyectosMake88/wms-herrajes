@@ -405,7 +405,7 @@ export default function Branches() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Costo adquisición</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
                     <input type="number" min="0" step="0.01" value={editForm.cost} onChange={(e) => setEditForm({ ...editForm, cost: e.target.value })}
@@ -539,7 +539,7 @@ export default function Branches() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Costo adquisición</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
                   <input type="number" min="0" step="0.01" value={addProductForm.cost} onChange={(e) => setAddProductForm({ ...addProductForm, cost: e.target.value })}
