@@ -149,7 +149,7 @@ export const authApi = {
     return requestFormData<any>('/auth/profile', 'PUT', formData);
   },
   getUsers: () => request<any>('/auth/users'),
-  createUser: (data: { email: string; password: string; name: string; role: string; branchId?: number }) =>
+  createUser: (data: { email: string; password: string; name: string; role: string; organizationId?: number; branchId?: number }) =>
     request<any>('/auth/users', { method: 'POST', body: JSON.stringify(data) }),
   updateUser: (id: number, data: { name?: string; role?: string; branchId?: number | null; isActive?: boolean }) =>
     request<any>(`/auth/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
