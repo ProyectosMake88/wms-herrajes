@@ -336,7 +336,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
               const fd = new FormData();
               fd.append('name', superAdminForm.name);
               fd.append('email', superAdminForm.email);
-              const fileToUpload = avatarFileRef.current || avatarFile;
+              const fileToUpload = avatarFileRef.current;
               if (fileToUpload) {
                 fd.append('avatar', fileToUpload);
               }

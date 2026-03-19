@@ -22,5 +22,5 @@ export const uploadAvatar = multer({
     if (allowed.includes(file.mimetype)) cb(null, true);
     else cb(new Error('Solo se aceptan: JPG, PNG, WEBP'));
   },
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });

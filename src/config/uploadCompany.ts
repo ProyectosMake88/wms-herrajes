@@ -22,5 +22,5 @@ export const uploadLogo = multer({
     if (allowed.includes(file.mimetype)) cb(null, true);
     else cb(new Error('Solo se aceptan: JPG, PNG, WEBP, SVG'));
   },
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
