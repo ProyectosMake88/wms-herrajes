@@ -289,8 +289,21 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <form onSubmit={async (e) => {
             e.preventDefault();
             try {
-              const res = await authApi.updateProfile({ name: superAdminForm.name, email: superAdminForm.email }, avatarFile || undefined);
-              const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email, avatarUrl: res.data?.avatarUrl || (user as any)?.avatarUrl };
+              const formData = new FormData();
+              formData.append('name', superAdminForm.name);
+              formData.append('email', superAdminForm.email);
+              if (avatarFile) formData.append('avatar', avatarFile);
+
+              const token = localStorage.getItem('wms_token');
+              const res = await fetch('/api/auth/profile', {
+                method: 'PUT',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body: formData,
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.message);
+
+              const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email, avatarUrl: data.data?.avatarUrl || (user as any)?.avatarUrl };
               localStorage.setItem('wms_user', JSON.stringify(updated));
               setShowProfile(false);
               window.location.reload();
