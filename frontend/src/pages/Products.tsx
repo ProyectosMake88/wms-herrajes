@@ -6,7 +6,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import Header from '../components/Layout/Header';
 import Modal from '../components/ui/Modal';
-import { productApi, categoryApi, reportApi } from '../services/api';
+import { productApi, categoryApi, reportApi, inventoryApi } from '../services/api';
 import { Product, Category, UNIT_LABELS, UnitOfMeasure } from '../types';
 
 interface TopProduct {
@@ -33,6 +33,7 @@ export default function Products() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [topSelling, setTopSelling] = useState<TopProduct[]>([]);
+  const [addStock, setAddStock] = useState('');
   const [formData, setFormData] = useState({
     name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT' as UnitOfMeasure,
     currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '',
@@ -78,6 +79,7 @@ export default function Products() {
     setFormData({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '' });
     clearImage();
     setEditingProduct(null);
+    setAddStock('');
   }
 
   function openCreate() {
@@ -116,6 +118,17 @@ export default function Products() {
           warehouseLocation: formData.warehouseLocation || undefined,
           price: formData.price ? Number(formData.price) : undefined,
         }, imageFile || undefined);
+
+        // Si se agregó stock, registrar movimiento de entrada
+        if (addStock && Number(addStock) > 0) {
+          await inventoryApi.registerMovement({
+            productId: editingProduct.id,
+            type: 'ENTRY',
+            quantity: Number(addStock),
+            reason: 'Ingreso de mercancía (desde edición de producto)',
+            responsible: 'Administrador',
+          });
+        }
       } else {
         await productApi.create({
           ...formData,
@@ -403,6 +416,34 @@ export default function Products() {
               </select>
             </div>
           </div>
+
+          {/* Stock info cuando se edita */}
+          {editingProduct && (
+            <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3">
+              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Inventario</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-gray-400 font-medium uppercase">Stock Actual</p>
+                  <p className={`text-xl font-bold ${editingProduct.isLowStock ? 'text-red-500' : 'text-gray-800'}`}>{editingProduct.currentStock}</p>
+                </div>
+                <div className="bg-white rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-gray-400 font-medium uppercase">Agregar Stock</p>
+                  <input type="number" min="0" value={addStock} onChange={(e) => setAddStock(e.target.value)}
+                    placeholder="0"
+                    className="w-full text-center text-xl font-bold text-emerald-600 bg-transparent border-none focus:outline-none" />
+                </div>
+                <div className="bg-white rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-gray-400 font-medium uppercase">Nuevo Total</p>
+                  <p className="text-xl font-bold text-emerald-600">
+                    {editingProduct.currentStock + (Number(addStock) || 0)}
+                  </p>
+                </div>
+              </div>
+              {addStock && Number(addStock) > 0 && (
+                <p className="text-xs text-blue-600 font-medium">Se registrará una entrada de {addStock} unidades al guardar</p>
+              )}
+            </div>
+          )}
 
           <div className={`grid gap-4 ${editingProduct ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {!editingProduct && (
