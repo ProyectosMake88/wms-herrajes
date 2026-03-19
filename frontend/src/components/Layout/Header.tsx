@@ -52,7 +52,21 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const [superAdminForm, setSuperAdminForm] = useState({ name: '', email: '' });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Load avatar from DB on mount
+  useEffect(() => {
+    if (isSuperAdmin) {
+      const token = localStorage.getItem('wms_token');
+      if (token) {
+        fetch('/api/auth/profile', { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(d => { if (d?.data?.avatarUrl) setCurrentAvatarUrl(d.data.avatarUrl); })
+          .catch(() => {});
+      }
+    }
+  }, [isSuperAdmin]);
   const { company, reload: reloadCompany } = useCompany();
   const navigate = useNavigate();
 
@@ -113,7 +127,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
   function openProfile() {
     if (user) {
       setSuperAdminForm({ name: user.name, email: user.email });
-      setAvatarPreview((user as any).avatarUrl || null);
+      setAvatarPreview(currentAvatarUrl || null);
       setAvatarFile(null);
     }
     setCompanyForm({
@@ -249,8 +263,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
               onClick={openProfile}
               className="flex items-center gap-3 bg-white rounded-xl border border-amber-200 px-3 py-2 shadow-sm hover:bg-amber-50 transition cursor-pointer"
             >
-              {(user as any)?.avatarUrl ? (
-                <img src={(user as any).avatarUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+              {currentAvatarUrl ? (
+                <img src={currentAvatarUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
               ) : (
                 <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
                   <Building2 className="w-4 h-4 text-amber-600" />
@@ -299,9 +313,9 @@ export default function Header({ title, subtitle }: HeaderProps) {
               const profileData = await profileRes.json();
               if (profileData?.data) {
                 localStorage.setItem('wms_user', JSON.stringify(profileData.data));
+                setCurrentAvatarUrl(profileData.data.avatarUrl || null);
               }
               setShowProfile(false);
-              window.location.reload();
             } catch (err: any) { alert(err.message || 'Error al guardar'); }
           }} className="space-y-4">
             <div className="flex flex-col items-center">
