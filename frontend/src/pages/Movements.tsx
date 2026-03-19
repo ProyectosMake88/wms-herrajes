@@ -17,7 +17,7 @@ export default function Movements() {
   const [alert, setAlert] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     productId: '', type: 'ENTRY' as 'ENTRY' | 'EXIT', quantity: '',
-    reason: '', responsible: '', notes: '',
+    salePrice: '', reason: '', responsible: '', notes: '',
   });
 
   useEffect(() => { loadData(); }, []);
@@ -44,13 +44,14 @@ export default function Movements() {
         productId: Number(formData.productId),
         type: formData.type,
         quantity: Number(formData.quantity),
+        salePrice: formData.type === 'EXIT' && formData.salePrice ? Number(formData.salePrice) : undefined,
         reason: formData.reason,
         responsible: formData.responsible,
         notes: formData.notes || undefined,
       });
       if (res.alert) setAlert(res.alert);
       setShowModal(false);
-      setFormData({ productId: '', type: 'ENTRY', quantity: '', reason: '', responsible: '', notes: '' });
+      setFormData({ productId: '', type: 'ENTRY', quantity: '', salePrice: '', reason: '', responsible: '', notes: '' });
       loadData();
     } catch (error: any) {
       alert(error.message);
@@ -58,10 +59,20 @@ export default function Movements() {
   }
 
   function calcValue(mov: Movement): string {
+    // Usar saleTotal si existe (movimientos de venta con precio registrado)
+    if (mov.saleTotal) {
+      return `$${Number(mov.saleTotal).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`;
+    }
+    // Fallback: calcular con precio del producto
     const price = mov.product?.price ? Number(mov.product.price) : 0;
     if (!price) return '—';
     return `$${(price * mov.quantity).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`;
   }
+
+  // Obtener precio sugerido del producto seleccionado
+  const selectedProduct = formData.productId
+    ? products.find((p) => p.id === Number(formData.productId))
+    : null;
 
   const filtered = movements.filter((m) => {
     if (filterType && m.type !== filterType) return false;
@@ -199,6 +210,48 @@ export default function Movements() {
                 className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
             </div>
           </div>
+
+          {/* Valor de venta — solo visible cuando es SALIDA */}
+          {formData.type === 'EXIT' && (
+            <div className="p-4 bg-red-50/50 rounded-xl border border-red-100 space-y-3">
+              <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">Datos de la venta</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio unitario de venta *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.salePrice}
+                      onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
+                      placeholder={selectedProduct?.price ? Number(selectedProduct.price).toFixed(2) : '0.00'}
+                      className="w-full pl-7 pr-3 py-2.5 bg-white rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none"
+                    />
+                  </div>
+                  {selectedProduct?.price && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, salePrice: Number(selectedProduct.price).toFixed(2) })}
+                      className="text-[11px] text-primary-600 hover:text-primary-700 font-medium mt-1"
+                    >
+                      Usar precio base: ${Number(selectedProduct.price).toFixed(2)}
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Total de la venta</label>
+                  <div className="px-3 py-2.5 bg-white rounded-xl border border-gray-200 text-sm font-bold text-red-600">
+                    {formData.salePrice && formData.quantity
+                      ? `$${(Number(formData.salePrice) * Number(formData.quantity)).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`
+                      : '$0.00'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Motivo *</label>

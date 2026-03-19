@@ -33,6 +33,8 @@ export interface Movement {
   productId: number;
   type: 'ENTRY' | 'EXIT';
   quantity: number;
+  salePrice: string | null;
+  saleTotal: string | null;
   reason: string;
   responsible: string;
   notes: string | null;

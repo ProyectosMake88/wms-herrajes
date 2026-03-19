@@ -100,6 +100,8 @@ model Movement {
   userId      Int?         @map("user_id")
   type        MovementType
   quantity    Int
+  salePrice   Decimal?     @map("sale_price") @db.Decimal(12, 2) // Valor unitario de venta (solo EXIT)
+  saleTotal   Decimal?     @map("sale_total") @db.Decimal(12, 2) // Total de la venta (precio x cantidad)
   reason      String
   responsible String       // Nombre del usuario responsable
   notes       String?

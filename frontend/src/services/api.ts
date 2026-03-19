@@ -95,6 +95,7 @@ export const inventoryApi = {
     productId: number;
     type: 'ENTRY' | 'EXIT';
     quantity: number;
+    salePrice?: number;
     reason: string;
     responsible: string;
     notes?: string;

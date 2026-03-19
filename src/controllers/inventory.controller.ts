@@ -5,11 +5,12 @@ import inventoryService from '../services/inventory.service';
 export class InventoryController {
   async registerMovement(req: AuthRequest, res: Response) {
     try {
-      const { productId, type, quantity, reason, responsible, notes } = req.body;
+      const { productId, type, quantity, salePrice, reason, responsible, notes } = req.body;
       const result = await inventoryService.registerMovement({
         productId,
         type,
         quantity,
+        salePrice: salePrice ? Number(salePrice) : undefined,
         reason,
         responsible,
         notes,

@@ -14,6 +14,7 @@ export default function SellerSales() {
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState('');
+  const [salePrice, setSalePrice] = useState('');
   const [reason, setReason] = useState('Venta');
   const [notes, setNotes] = useState('');
   const [alert, setAlert] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export default function SellerSales() {
   function openSale(product: Product) {
     setSelectedProduct(product);
     setQuantity('');
+    setSalePrice(product.price ? Number(product.price).toFixed(2) : '');
     setReason('Venta');
     setNotes('');
     setShowModal(true);
@@ -48,6 +50,7 @@ export default function SellerSales() {
         productId: selectedProduct.id,
         type: 'EXIT',
         quantity: Number(quantity),
+        salePrice: salePrice ? Number(salePrice) : undefined,
         reason,
         responsible: user?.name || 'Vendedor',
         notes: notes || undefined,
@@ -164,13 +167,34 @@ export default function SellerSales() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad a vender *</label>
-              <input required type="number" min="1" max={selectedProduct.currentStock}
-                value={quantity} onChange={(e) => setQuantity(e.target.value)}
-                placeholder={`Máximo: ${selectedProduct.currentStock}`}
-                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad *</label>
+                <input required type="number" min="1" max={selectedProduct.currentStock}
+                  value={quantity} onChange={(e) => setQuantity(e.target.value)}
+                  placeholder={`Máx: ${selectedProduct.currentStock}`}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Precio unitario *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                  <input required type="number" min="0" step="0.01"
+                    value={salePrice} onChange={(e) => setSalePrice(e.target.value)}
+                    className="w-full pl-7 pr-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+                </div>
+              </div>
             </div>
+
+            {/* Total */}
+            {quantity && salePrice && (
+              <div className="flex items-center justify-between p-3 bg-primary-50 rounded-xl">
+                <span className="text-sm font-medium text-gray-700">Total de la venta</span>
+                <span className="text-lg font-bold text-primary-700">
+                  ${(Number(salePrice) * Number(quantity)).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>

@@ -6,6 +6,7 @@ interface RegisterMovementDTO {
   productId: number;
   type: MovementType;
   quantity: number;
+  salePrice?: number;
   reason: string;
   responsible: string;
   notes?: string;
@@ -18,7 +19,7 @@ export class InventoryService {
    * Genera notificaciones automáticas para el admin.
    */
   async registerMovement(data: RegisterMovementDTO) {
-    const { productId, type, quantity, reason, responsible, notes, userId } = data;
+    const { productId, type, quantity, salePrice, reason, responsible, notes, userId } = data;
 
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) {
@@ -32,8 +33,16 @@ export class InventoryService {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      const saleTotal = type === MovementType.EXIT && salePrice
+        ? salePrice * quantity
+        : undefined;
+
       const movement = await tx.movement.create({
-        data: { productId, userId, type, quantity, reason, responsible, notes },
+        data: {
+          productId, userId, type, quantity, reason, responsible, notes,
+          salePrice: type === MovementType.EXIT ? salePrice : undefined,
+          saleTotal,
+        },
       });
 
       const stockChange = type === MovementType.ENTRY ? quantity : -quantity;
