@@ -84,7 +84,7 @@ export class InventoryService {
   async getMovementsByProduct(productId: number) {
     return prisma.movement.findMany({
       where: { productId },
-      include: { product: { select: { id: true, name: true, sku: true } } },
+      include: { product: { select: { id: true, name: true, sku: true, price: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -96,7 +96,7 @@ export class InventoryService {
 
     return prisma.movement.findMany({
       where,
-      include: { product: { select: { id: true, name: true, sku: true } } },
+      include: { product: { select: { id: true, name: true, sku: true, price: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }

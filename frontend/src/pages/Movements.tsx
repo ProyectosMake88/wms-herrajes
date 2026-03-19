@@ -57,6 +57,12 @@ export default function Movements() {
     }
   }
 
+  function calcValue(mov: Movement): string {
+    const price = mov.product?.price ? Number(mov.product.price) : 0;
+    if (!price) return '—';
+    return `$${(price * mov.quantity).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`;
+  }
+
   const filtered = movements.filter((m) => {
     if (filterType && m.type !== filterType) return false;
     return true;
@@ -109,19 +115,20 @@ export default function Movements() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50/80">
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Producto</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cantidad</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Motivo</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Responsable</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Producto</th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cantidad</th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Valor</th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Motivo</th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Responsable</th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.map((mov) => (
                 <tr key={mov.id} className="table-row-hover transition-colors">
-                  <td className="px-6 py-3.5">
+                  <td className="px-6 py-3.5 text-center">
                     {mov.type === 'ENTRY' ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 text-xs font-semibold rounded-full">
                         <ArrowDownToLine className="w-3 h-3" /> Entrada
@@ -132,16 +139,21 @@ export default function Movements() {
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-3.5 text-sm font-medium text-gray-800">{mov.product?.name}</td>
-                  <td className="px-6 py-3.5 text-sm font-mono text-gray-500">{mov.product?.sku}</td>
-                  <td className="px-6 py-3.5 text-sm font-bold text-right text-gray-800">{mov.quantity}</td>
-                  <td className="px-6 py-3.5 text-sm text-gray-600">{mov.reason}</td>
-                  <td className="px-6 py-3.5 text-sm text-gray-600">{mov.responsible}</td>
-                  <td className="px-6 py-3.5 text-sm text-gray-500">{new Date(mov.createdAt).toLocaleDateString('es-CO')}</td>
+                  <td className="px-6 py-3.5 text-sm font-medium text-gray-800 text-center">{mov.product?.name}</td>
+                  <td className="px-6 py-3.5 text-sm font-mono text-gray-500 text-center">{mov.product?.sku}</td>
+                  <td className="px-6 py-3.5 text-sm font-bold text-gray-800 text-center">{mov.quantity}</td>
+                  <td className="px-6 py-3.5 text-sm font-semibold text-center">
+                    <span className={mov.type === 'EXIT' ? 'text-red-600' : 'text-emerald-600'}>
+                      {calcValue(mov)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-3.5 text-sm text-gray-600 text-center">{mov.reason}</td>
+                  <td className="px-6 py-3.5 text-sm text-gray-600 text-center">{mov.responsible}</td>
+                  <td className="px-6 py-3.5 text-sm text-gray-500 text-center">{new Date(mov.createdAt).toLocaleDateString('es-CO')}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">No hay movimientos registrados</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-gray-400">No hay movimientos registrados</td></tr>
               )}
             </tbody>
           </table>

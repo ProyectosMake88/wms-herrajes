@@ -37,7 +37,7 @@ export interface Movement {
   responsible: string;
   notes: string | null;
   createdAt: string;
-  product?: { id: number; name: string; sku: string };
+  product?: { id: number; name: string; sku: string; price?: string | null };
 }
 
 export type UnitOfMeasure = 'UNIT' | 'DOZEN' | 'THOUSAND' | 'KG' | 'METER' | 'BOX' | 'PAIR';
