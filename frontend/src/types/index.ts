@@ -79,6 +79,10 @@ export interface MovementsReport {
     totalExits: number;
     totalEntryQuantity: number;
     totalExitQuantity: number;
+    totalSaleRevenue: number;
+    totalCostOfSales: number;
+    totalProfit: number;
+    profitMargin: number;
     dateRange: { from: string; to: string };
   };
   movements: Movement[];

@@ -65,22 +65,39 @@ export class ReportService {
       where,
       include: {
         product: {
-          select: { id: true, name: true, sku: true, category: { select: { name: true } } },
+          select: { id: true, name: true, sku: true, cost: true, price: true, category: { select: { name: true } } },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
 
+    const exits = movements.filter((m) => m.type === MovementType.EXIT);
+
+    // Calcular totales financieros de ventas
+    const totalSaleRevenue = exits.reduce((sum, m) => {
+      return sum + (m.saleTotal ? Number(m.saleTotal) : 0);
+    }, 0);
+
+    const totalCostOfSales = exits.reduce((sum, m) => {
+      const unitCost = m.product?.cost ? Number(m.product.cost) : 0;
+      return sum + (unitCost * m.quantity);
+    }, 0);
+
+    const totalProfit = totalSaleRevenue - totalCostOfSales;
+    const profitMargin = totalSaleRevenue > 0 ? (totalProfit / totalSaleRevenue) * 100 : 0;
+
     const summary = {
       totalMovements: movements.length,
       totalEntries: movements.filter((m) => m.type === MovementType.ENTRY).length,
-      totalExits: movements.filter((m) => m.type === MovementType.EXIT).length,
+      totalExits: exits.length,
       totalEntryQuantity: movements
         .filter((m) => m.type === MovementType.ENTRY)
         .reduce((sum, m) => sum + m.quantity, 0),
-      totalExitQuantity: movements
-        .filter((m) => m.type === MovementType.EXIT)
-        .reduce((sum, m) => sum + m.quantity, 0),
+      totalExitQuantity: exits.reduce((sum, m) => sum + m.quantity, 0),
+      totalSaleRevenue,
+      totalCostOfSales,
+      totalProfit,
+      profitMargin,
       dateRange: { from: startDate.toISOString(), to: endDate.toISOString() },
     };
 

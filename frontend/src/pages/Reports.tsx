@@ -1,16 +1,99 @@
 import { useEffect, useState } from 'react';
 import {
   BarChart3, Download, Calendar, ArrowDownToLine,
-  ArrowUpFromLine, Package, AlertTriangle,
+  ArrowUpFromLine, Package, AlertTriangle, DollarSign, TrendingUp, FileSpreadsheet,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, LineChart, Line,
+  ResponsiveContainer,
 } from 'recharts';
 import Header from '../components/Layout/Header';
 import StatsCard from '../components/ui/StatsCard';
 import { reportApi } from '../services/api';
 import { StockReport, MovementsReport } from '../types';
+
+function exportToXlsx(report: MovementsReport) {
+  const s = report.summary;
+  // Build XML Spreadsheet (compatible with Excel)
+  const rows = report.movements.map((m: any) => {
+    const saleTotal = m.saleTotal ? Number(m.saleTotal) : 0;
+    const costTotal = m.product?.cost ? Number(m.product.cost) * m.quantity : 0;
+    const profit = m.type === 'EXIT' ? saleTotal - costTotal : 0;
+    return {
+      Tipo: m.type === 'ENTRY' ? 'Entrada' : 'Salida',
+      Producto: m.product?.name || '',
+      SKU: m.product?.sku || '',
+      Cantidad: m.quantity,
+      'Venta Total': m.type === 'EXIT' ? saleTotal : '',
+      'Costo Total': m.type === 'EXIT' ? costTotal : '',
+      Utilidad: m.type === 'EXIT' ? profit : '',
+      Motivo: m.reason,
+      Responsable: m.responsible,
+      Fecha: new Date(m.createdAt).toLocaleDateString('es-CO'),
+    };
+  });
+
+  // Build HTML table for Excel
+  const headers = Object.keys(rows[0] || {});
+  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="UTF-8">
+<style>
+  table { border-collapse: collapse; font-family: Calibri, sans-serif; }
+  th { background-color: #5b21b6; color: white; font-weight: bold; padding: 10px 14px; font-size: 12px; text-align: center; }
+  td { padding: 8px 12px; border: 1px solid #e5e7eb; font-size: 11px; text-align: center; }
+  tr:nth-child(even) { background-color: #f5f3ff; }
+  .title { font-size: 18px; font-weight: bold; color: #5b21b6; padding: 10px; }
+  .subtitle { font-size: 12px; color: #6b7280; padding: 4px 10px; }
+  .summary-label { font-weight: bold; padding: 6px 12px; text-align: right; background: #f9fafb; }
+  .summary-value { font-weight: bold; padding: 6px 12px; font-size: 13px; }
+  .green { color: #059669; }
+  .red { color: #dc2626; }
+  .blue { color: #2563eb; }
+  .amber { color: #d97706; }
+</style></head><body>`;
+
+  // Title
+  html += `<div class="title">Reporte de Movimientos - WMS Herrajes</div>`;
+  html += `<div class="subtitle">Período: ${new Date(s.dateRange.from).toLocaleDateString('es-CO')} al ${new Date(s.dateRange.to).toLocaleDateString('es-CO')}</div><br/>`;
+
+  // Summary table
+  html += `<table><tr><td class="summary-label">Total Movimientos:</td><td class="summary-value">${s.totalMovements}</td>`;
+  html += `<td class="summary-label">Entradas:</td><td class="summary-value green">${s.totalEntries} (${s.totalEntryQuantity} uds)</td></tr>`;
+  html += `<tr><td class="summary-label">Salidas:</td><td class="summary-value red">${s.totalExits} (${s.totalExitQuantity} uds)</td>`;
+  html += `<td class="summary-label">Ingresos por Ventas:</td><td class="summary-value blue">$${s.totalSaleRevenue.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td></tr>`;
+  html += `<tr><td class="summary-label">Costo de Adquisición:</td><td class="summary-value amber">$${s.totalCostOfSales.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>`;
+  html += `<td class="summary-label">Utilidad Neta:</td><td class="summary-value ${s.totalProfit >= 0 ? 'green' : 'red'}">$${s.totalProfit.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td></tr>`;
+  html += `<tr><td class="summary-label">Margen de Ganancia:</td><td class="summary-value ${s.profitMargin >= 0 ? 'green' : 'red'}">${s.profitMargin.toFixed(1)}%</td>`;
+  html += `<td></td><td></td></tr></table><br/>`;
+
+  // Data table
+  html += '<table><thead><tr>';
+  headers.forEach((h) => { html += `<th>${h}</th>`; });
+  html += '</tr></thead><tbody>';
+  rows.forEach((row: any) => {
+    html += '<tr>';
+    headers.forEach((h) => {
+      const val = row[h];
+      const isNum = typeof val === 'number';
+      const isMoney = ['Venta Total', 'Costo Total', 'Utilidad'].includes(h) && val !== '';
+      let cls = '';
+      if (h === 'Utilidad' && val !== '') cls = Number(val) >= 0 ? 'green' : 'red';
+      if (h === 'Venta Total') cls = 'blue';
+      if (h === 'Costo Total') cls = 'amber';
+      html += `<td class="${cls}">${isMoney ? '$' + Number(val).toLocaleString('es-CO', { minimumFractionDigits: 2 }) : val}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></body></html>';
+
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Reporte_Movimientos_${new Date().toISOString().split('T')[0]}.xls`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState<'stock' | 'movements'>('stock');
@@ -175,53 +258,125 @@ export default function Reports() {
 
           {movementsReport && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+              {/* Movement Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-5">
                 <StatsCard title="Total Movimientos" value={movementsReport.summary.totalMovements} icon={<BarChart3 className="w-6 h-6" />} color="purple" />
                 <StatsCard title="Entradas" value={movementsReport.summary.totalEntries} icon={<ArrowDownToLine className="w-6 h-6" />} color="green" subtitle={`${movementsReport.summary.totalEntryQuantity} unidades`} />
                 <StatsCard title="Salidas" value={movementsReport.summary.totalExits} icon={<ArrowUpFromLine className="w-6 h-6" />} color="red" subtitle={`${movementsReport.summary.totalExitQuantity} unidades`} />
                 <StatsCard title="Balance Neto" value={movementsReport.summary.totalEntryQuantity - movementsReport.summary.totalExitQuantity} icon={<Package className="w-6 h-6" />} color="blue" subtitle="Diferencia E/S" />
               </div>
 
+              {/* Financial Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-white" />
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Ingresos por Ventas</p>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">${movementsReport.summary.totalSaleRevenue.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center">
+                      <Package className="w-5 h-5 text-white" />
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Costo de Adquisición</p>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">${movementsReport.summary.totalCostOfSales.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${movementsReport.summary.totalProfit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                      <TrendingUp className="w-5 h-5 text-white" />
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Utilidad Neta</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${movementsReport.summary.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    ${movementsReport.summary.totalProfit.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${movementsReport.summary.profitMargin >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                      <BarChart3 className="w-5 h-5 text-white" />
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Margen de Ganancia</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${movementsReport.summary.profitMargin >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {movementsReport.summary.profitMargin.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+
               {/* Movements Table */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                   <h3 className="text-base font-bold text-gray-800">
                     Movimientos del {new Date(dateRange.startDate).toLocaleDateString('es-CO')} al {new Date(dateRange.endDate).toLocaleDateString('es-CO')}
                   </h3>
+                  <button
+                    onClick={() => exportToXlsx(movementsReport)}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition shadow-sm"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" /> Descargar XLSX
+                  </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50/80">
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Tipo</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Producto</th>
-                        <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Cantidad</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Motivo</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Responsable</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Fecha</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Tipo</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Producto</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Cant.</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Venta Total</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Costo Total</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Utilidad</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Motivo</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Responsable</th>
+                        <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Fecha</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {movementsReport.movements.map((m) => (
-                        <tr key={m.id} className="table-row-hover">
-                          <td className="px-6 py-3">
-                            {m.type === 'ENTRY' ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 text-xs font-semibold rounded-full">
-                                <ArrowDownToLine className="w-3 h-3" /> Entrada
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full">
-                                <ArrowUpFromLine className="w-3 h-3" /> Salida
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-3 text-sm font-medium text-gray-800">{m.product?.name}</td>
-                          <td className="px-6 py-3 text-sm font-bold text-right">{m.quantity}</td>
-                          <td className="px-6 py-3 text-sm text-gray-600">{m.reason}</td>
-                          <td className="px-6 py-3 text-sm text-gray-600">{m.responsible}</td>
-                          <td className="px-6 py-3 text-sm text-gray-500">{new Date(m.createdAt).toLocaleDateString('es-CO')}</td>
-                        </tr>
-                      ))}
+                      {movementsReport.movements.map((m: any) => {
+                        const saleTotal = m.saleTotal ? Number(m.saleTotal) : 0;
+                        const costTotal = m.product?.cost ? Number(m.product.cost) * m.quantity : 0;
+                        const profit = m.type === 'EXIT' ? saleTotal - costTotal : 0;
+                        return (
+                          <tr key={m.id} className="table-row-hover">
+                            <td className="px-5 py-3 text-center">
+                              {m.type === 'ENTRY' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 text-xs font-semibold rounded-full">
+                                  <ArrowDownToLine className="w-3 h-3" /> Entrada
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full">
+                                  <ArrowUpFromLine className="w-3 h-3" /> Salida
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3 text-sm font-medium text-gray-800 text-center">{m.product?.name}</td>
+                            <td className="px-5 py-3 text-sm font-bold text-center">{m.quantity}</td>
+                            <td className="px-5 py-3 text-sm font-semibold text-center text-blue-600">
+                              {m.type === 'EXIT' && saleTotal ? `$${saleTotal.toLocaleString('es-CO', { minimumFractionDigits: 2 })}` : '—'}
+                            </td>
+                            <td className="px-5 py-3 text-sm font-semibold text-center text-amber-600">
+                              {m.type === 'EXIT' && costTotal ? `$${costTotal.toLocaleString('es-CO', { minimumFractionDigits: 2 })}` : '—'}
+                            </td>
+                            <td className="px-5 py-3 text-sm font-bold text-center">
+                              {m.type === 'EXIT' ? (
+                                <span className={profit >= 0 ? 'text-emerald-600' : 'text-red-500'}>
+                                  ${profit.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                                </span>
+                              ) : '—'}
+                            </td>
+                            <td className="px-5 py-3 text-sm text-gray-600 text-center">{m.reason}</td>
+                            <td className="px-5 py-3 text-sm text-gray-600 text-center">{m.responsible}</td>
+                            <td className="px-5 py-3 text-sm text-gray-500 text-center">{new Date(m.createdAt).toLocaleDateString('es-CO')}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
