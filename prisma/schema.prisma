@@ -39,8 +39,10 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  movements     Movement[]
-  notifications Notification[]
+  movements        Movement[]
+  notifications    Notification[]
+  pendingEntries   PendingEntry[] @relation("PendingEntryUser")
+  reviewedEntries  PendingEntry[] @relation("PendingEntryReviewer")
 
   @@map("users")
 }
@@ -81,9 +83,10 @@ model Product {
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
-  category      Category       @relation(fields: [categoryId], references: [id])
-  movements     Movement[]
-  notifications Notification[]
+  category       Category       @relation(fields: [categoryId], references: [id])
+  movements      Movement[]
+  notifications  Notification[]
+  pendingEntries PendingEntry[]
 
   @@index([categoryId])
   @@index([sku])
@@ -118,6 +121,32 @@ model Movement {
 }
 
 // ============================================================
+// SOLICITUDES DE ENTRADA - Requieren aprobación del admin
+// ============================================================
+model PendingEntry {
+  id          Int               @id @default(autoincrement())
+  productId   Int               @map("product_id")
+  userId      Int               @map("user_id")
+  quantity    Int
+  reason      String
+  notes       String?
+  status      PendingStatus     @default(PENDING)
+  reviewedBy  Int?              @map("reviewed_by")
+  reviewedAt  DateTime?         @map("reviewed_at")
+  rejectReason String?          @map("reject_reason")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  product  Product @relation(fields: [productId], references: [id])
+  user     User    @relation("PendingEntryUser", fields: [userId], references: [id])
+  reviewer User?   @relation("PendingEntryReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("pending_entries")
+}
+
+// ============================================================
 // NOTIFICACIONES - Alertas de stock y registro de ventas
 // ============================================================
 model Notification {
@@ -141,11 +170,20 @@ model Notification {
 // ============================================================
 // ENUMS
 // ============================================================
+enum PendingStatus {
+  PENDING   // Pendiente de aprobación
+  APPROVED  // Aprobada
+  REJECTED  // Rechazada
+}
+
 enum NotificationType {
-  LOW_STOCK    // Alerta de stock bajo
-  OUT_OF_STOCK // Producto agotado
-  SALE         // Venta registrada por vendedor
-  ENTRY        // Entrada de inventario
+  LOW_STOCK      // Alerta de stock bajo
+  OUT_OF_STOCK   // Producto agotado
+  SALE           // Venta registrada por vendedor
+  ENTRY          // Entrada de inventario
+  PENDING_ENTRY  // Solicitud de entrada pendiente de aprobación
+  ENTRY_APPROVED // Entrada aprobada
+  ENTRY_REJECTED // Entrada rechazada
 }
 
 enum UserRole {

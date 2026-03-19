@@ -11,6 +11,8 @@ import Reports from './pages/Reports';
 import Alerts from './pages/Alerts';
 import Users from './pages/Users';
 import SellerSales from './pages/SellerSales';
+import Approvals from './pages/Approvals';
+import RequestEntry from './pages/RequestEntry';
 import { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -37,9 +39,13 @@ function AppRoutes() {
         <Route index element={isAdmin ? <Dashboard /> : <SellerSales />} />
         <Route path="products" element={<Products />} />
 
+        {/* Vendedor */}
+        <Route path="request-entry" element={<RequestEntry />} />
+
         {/* Solo admin */}
         <Route path="categories" element={<AdminRoute><Categories /></AdminRoute>} />
         <Route path="movements" element={<AdminRoute><Movements /></AdminRoute>} />
+        <Route path="approvals" element={<AdminRoute><Approvals /></AdminRoute>} />
         <Route path="reports" element={<AdminRoute><Reports /></AdminRoute>} />
         <Route path="alerts" element={<AdminRoute><Alerts /></AdminRoute>} />
         <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />

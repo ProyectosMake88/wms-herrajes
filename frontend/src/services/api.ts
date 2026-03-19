@@ -144,6 +144,19 @@ export const companyApi = {
   },
 };
 
+// Pending Entries
+export const pendingEntryApi = {
+  create: (data: { productId: number; quantity: number; reason: string; notes?: string }) =>
+    request<any>('/pending-entries', { method: 'POST', body: JSON.stringify(data) }),
+  getAll: (status?: string) => {
+    const query = status ? `?status=${status}` : '';
+    return request<any>(`/pending-entries${query}`);
+  },
+  approve: (id: number) => request<any>(`/pending-entries/${id}/approve`, { method: 'PUT' }),
+  reject: (id: number, rejectReason: string) =>
+    request<any>(`/pending-entries/${id}/reject`, { method: 'PUT', body: JSON.stringify({ rejectReason }) }),
+};
+
 // Notifications
 export const notificationApi = {
   getAll: () => request<any>('/notifications'),

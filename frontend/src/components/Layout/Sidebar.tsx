@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Tags, ArrowLeftRight, BarChart3,
-  AlertTriangle, Warehouse, Users, ShoppingBag, LogOut,
+  AlertTriangle, Warehouse, Users, ShoppingBag, LogOut, ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
@@ -12,6 +12,7 @@ const adminNav = [
   { to: '/products', icon: Package, label: 'Productos' },
   { to: '/movements', icon: ArrowLeftRight, label: 'Movimientos' },
   { to: '/reports', icon: BarChart3, label: 'Reportes' },
+  { to: '/approvals', icon: ClipboardCheck, label: 'Aprobaciones' },
   { to: '/alerts', icon: AlertTriangle, label: 'Alertas Stock' },
   { to: '/users', icon: Users, label: 'Usuarios' },
 ];
@@ -19,6 +20,7 @@ const adminNav = [
 const sellerNav = [
   { to: '/', icon: ShoppingBag, label: 'Registrar Venta' },
   { to: '/products', icon: Package, label: 'Ver Productos' },
+  { to: '/request-entry', icon: ArrowLeftRight, label: 'Solicitar Entrada' },
 ];
 
 export default function Sidebar() {

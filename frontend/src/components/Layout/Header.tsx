@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Bell, User, AlertTriangle, ShoppingBag, ArrowDownToLine,
   PackageX, Check, CheckCheck, Building2, Camera, Save, X,
+  Clock, CheckCircle, XCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
@@ -29,6 +30,9 @@ const typeConfig = {
   OUT_OF_STOCK: { icon: PackageX, color: 'text-red-500', bg: 'bg-red-50' },
   SALE: { icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
   ENTRY: { icon: ArrowDownToLine, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+  PENDING_ENTRY: { icon: Clock, color: 'text-orange-500', bg: 'bg-orange-50' },
+  ENTRY_APPROVED: { icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+  ENTRY_REJECTED: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
 };
 
 function timeAgo(date: string) {
