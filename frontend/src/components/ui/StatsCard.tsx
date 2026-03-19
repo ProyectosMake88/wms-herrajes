@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface StatsCardProps {
   title: string;
@@ -6,6 +7,7 @@ interface StatsCardProps {
   icon: ReactNode;
   subtitle?: string;
   color: 'purple' | 'blue' | 'green' | 'orange' | 'red';
+  href?: string;
 }
 
 const colorMap = {
@@ -16,10 +18,15 @@ const colorMap = {
   red: { bg: 'bg-red-50', icon: 'bg-red-500', text: 'text-red-600' },
 };
 
-export default function StatsCard({ title, value, icon, subtitle, color }: StatsCardProps) {
+export default function StatsCard({ title, value, icon, subtitle, color, href }: StatsCardProps) {
   const c = colorMap[color];
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+    <div
+      onClick={() => href && navigate(href)}
+      className={`bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${href ? 'cursor-pointer hover:border-primary-200' : ''}`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-500 font-medium">{title}</p>

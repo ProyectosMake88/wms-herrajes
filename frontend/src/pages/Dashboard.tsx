@@ -83,10 +83,10 @@ export default function Dashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-        <StatsCard title="Total Productos" value={stats.total} icon={<Package className="w-6 h-6" />} color="purple" subtitle="Productos activos" />
-        <StatsCard title="Categorías" value={stats.categories} icon={<Tags className="w-6 h-6" />} color="blue" subtitle="Categorías registradas" />
-        <StatsCard title="Stock Bajo" value={stats.lowStock} icon={<AlertTriangle className="w-6 h-6" />} color="orange" subtitle="Requieren atención" />
-        <StatsCard title="Sin Stock" value={stats.outOfStock} icon={<TrendingUp className="w-6 h-6" />} color="red" subtitle="Agotados" />
+        <StatsCard title="Total Productos" value={stats.total} icon={<Package className="w-6 h-6" />} color="purple" subtitle="Productos activos" href="/products" />
+        <StatsCard title="Categorías" value={stats.categories} icon={<Tags className="w-6 h-6" />} color="blue" subtitle="Categorías registradas" href="/categories" />
+        <StatsCard title="Stock Bajo" value={stats.lowStock} icon={<AlertTriangle className="w-6 h-6" />} color="orange" subtitle="Requieren atención" href="/alerts" />
+        <StatsCard title="Sin Stock" value={stats.outOfStock} icon={<TrendingUp className="w-6 h-6" />} color="red" subtitle="Agotados" href="/alerts" />
       </div>
 
       {/* Charts Row */}
