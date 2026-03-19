@@ -110,11 +110,15 @@ export const inventoryApi = {
 
 // Reports
 export const reportApi = {
-  getStockReport: () => request<any>('/reports/stock'),
+  getStockReport: (branchId?: string) => {
+    const query = branchId ? `?branchId=${branchId}` : '';
+    return request<any>(`/reports/stock${query}`);
+  },
   getStockByCategory: (categoryId: number) => request<any>(`/reports/stock/category/${categoryId}`),
-  getMovementsReport: (startDate: string, endDate: string, type?: string) => {
+  getMovementsReport: (startDate: string, endDate: string, type?: string, branchId?: string) => {
     let query = `?startDate=${startDate}&endDate=${endDate}`;
     if (type) query += `&type=${type}`;
+    if (branchId) query += `&branchId=${branchId}`;
     return request<any>(`/reports/movements${query}`);
   },
   getLowStockReport: () => request<any>('/reports/low-stock'),

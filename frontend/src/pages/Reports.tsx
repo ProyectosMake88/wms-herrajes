@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   BarChart3, Download, Calendar, ArrowDownToLine,
-  ArrowUpFromLine, Package, AlertTriangle, DollarSign, TrendingUp, FileSpreadsheet,
+  ArrowUpFromLine, Package, AlertTriangle, DollarSign, TrendingUp, FileSpreadsheet, MapPin,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -9,14 +9,18 @@ import {
 } from 'recharts';
 import Header from '../components/Layout/Header';
 import StatsCard from '../components/ui/StatsCard';
-import { reportApi } from '../services/api';
+import { reportApi, branchApi } from '../services/api';
 import { StockReport, MovementsReport } from '../types';
 import { exportMovementsReport } from '../utils/exportExcel';
 import { useCompany } from '../context/CompanyContext';
 
+interface Branch { id: number; name: string; code: string; }
+
 export default function Reports() {
   const { company } = useCompany();
   const [activeTab, setActiveTab] = useState<'stock' | 'movements'>('stock');
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [filterBranch, setFilterBranch] = useState('');
   const [stockReport, setStockReport] = useState<StockReport | null>(null);
   const [movementsReport, setMovementsReport] = useState<MovementsReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,12 +31,19 @@ export default function Reports() {
     endDate: new Date().toISOString().split('T')[0],
   });
 
-  useEffect(() => { loadStockReport(); }, []);
+  useEffect(() => { loadBranches(); loadStockReport(); }, []);
+
+  async function loadBranches() {
+    try {
+      const res = await branchApi.getAll();
+      setBranches(res.data);
+    } catch {}
+  }
 
   async function loadStockReport() {
     setLoading(true);
     try {
-      const res = await reportApi.getStockReport();
+      const res = await reportApi.getStockReport(filterBranch || undefined);
       setStockReport(res.data);
     } catch (error) {
       console.error(error);
@@ -44,7 +55,7 @@ export default function Reports() {
   async function loadMovementsReport() {
     setLoading(true);
     try {
-      const res = await reportApi.getMovementsReport(dateRange.startDate, dateRange.endDate);
+      const res = await reportApi.getMovementsReport(dateRange.startDate, dateRange.endDate, undefined, filterBranch || undefined);
       setMovementsReport(res.data);
     } catch (error) {
       console.error(error);
@@ -113,6 +124,35 @@ export default function Reports() {
   return (
     <div>
       <Header title="Reportes" subtitle="Análisis y reportes del inventario" />
+
+      {/* Branch Filter */}
+      <div className="flex items-center gap-3 mb-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <MapPin className="w-5 h-5 text-primary-500" />
+        <span className="text-sm font-medium text-gray-700">Sede:</span>
+        <select
+          value={filterBranch}
+          onChange={(e) => {
+            setFilterBranch(e.target.value);
+            setStockReport(null);
+            setMovementsReport(null);
+          }}
+          className="px-3 py-2 bg-primary-50 rounded-xl border border-primary-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 text-primary-700 font-medium flex-1 max-w-xs"
+        >
+          <option value="">Todas las sedes (General)</option>
+          {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}
+        </select>
+        <button
+          onClick={() => { if (activeTab === 'stock') loadStockReport(); else loadMovementsReport(); }}
+          className="px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition"
+        >
+          Aplicar
+        </button>
+        {filterBranch && (
+          <span className="text-xs text-primary-600 bg-primary-50 px-2 py-1 rounded-lg font-medium">
+            Filtrando: {branches.find((b: any) => b.id === Number(filterBranch))?.name}
+          </span>
+        )}
+      </div>
 
       {/* Tab Switcher */}
       <div className="flex gap-2 mb-6">

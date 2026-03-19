@@ -6,9 +6,10 @@ export class ReportController {
    * GET /api/reports/stock
    * Reporte general de existencias
    */
-  async getStockReport(_req: Request, res: Response) {
+  async getStockReport(req: Request, res: Response) {
     try {
-      const report = await reportService.getStockReport();
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      const report = await reportService.getStockReport(branchId);
       res.json({ success: true, data: report });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
@@ -47,7 +48,8 @@ export class ReportController {
       const end = new Date(endDate as string);
       end.setHours(23, 59, 59, 999); // Incluir todo el día final
 
-      const report = await reportService.getMovementsReport(start, end, type as any);
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      const report = await reportService.getMovementsReport(start, end, type as any, branchId);
       res.json({ success: true, data: report });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });

@@ -6,10 +6,12 @@ export class ReportService {
    * Reporte General de Existencias
    * Retorna todos los productos con su stock actual, categoría y estado
    */
-  async getStockReport() {
+  async getStockReport(branchId?: number) {
+    const where: any = { isActive: true };
+    if (branchId) where.branchId = branchId;
     const products = await prisma.product.findMany({
-      where: { isActive: true },
-      include: { category: { select: { id: true, name: true } } },
+      where,
+      include: { category: { select: { id: true, name: true } }, branch: { select: { id: true, name: true } } },
       orderBy: [{ category: { name: 'asc' } }, { name: 'asc' }],
     });
 
@@ -55,11 +57,12 @@ export class ReportService {
   /**
    * Reporte de movimientos (Entradas/Salidas) en un rango de fechas
    */
-  async getMovementsReport(startDate: Date, endDate: Date, type?: MovementType) {
+  async getMovementsReport(startDate: Date, endDate: Date, type?: MovementType, branchId?: number) {
     const where: any = {
       createdAt: { gte: startDate, lte: endDate },
     };
     if (type) where.type = type;
+    if (branchId) where.branchId = branchId;
 
     const movements = await prisma.movement.findMany({
       where,
