@@ -60,8 +60,11 @@ export class AuthController {
 
   async updateProfile(req: AuthRequest, res: Response) {
     try {
-      const { name, email } = req.body;
-      const user = await authService.updateUser(req.user!.id, { name, email });
+      const data: any = {};
+      if (req.body.name) data.name = req.body.name;
+      if (req.body.email) data.email = req.body.email;
+      if (req.file) data.avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      const user = await authService.updateUser(req.user!.id, data);
       res.json({ success: true, data: user });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message });

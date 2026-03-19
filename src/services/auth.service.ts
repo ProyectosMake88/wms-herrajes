@@ -60,7 +60,7 @@ export class AuthService {
 
     return {
       token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, organizationId: user.organizationId, branchId: user.branchId, branch: user.branch },
+      user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, role: user.role, organizationId: user.organizationId, branchId: user.branchId, branch: user.branch },
     };
   }
 
@@ -71,11 +71,11 @@ export class AuthService {
     });
   }
 
-  async updateUser(id: number, data: { name?: string; email?: string; role?: UserRole; branchId?: number | null; isActive?: boolean }) {
+  async updateUser(id: number, data: { name?: string; email?: string; avatarUrl?: string; role?: UserRole; branchId?: number | null; isActive?: boolean }) {
     return prisma.user.update({
       where: { id },
       data,
-      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
+      select: { id: true, email: true, name: true, avatarUrl: true, role: true, isActive: true, createdAt: true },
     });
   }
 

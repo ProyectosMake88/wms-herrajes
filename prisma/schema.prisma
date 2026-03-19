@@ -87,6 +87,7 @@ model User {
   email          String   @unique
   password       String
   name           String
+  avatarUrl      String?  @map("avatar_url")
   role           UserRole @default(SELLER)
   organizationId Int?     @map("organization_id")
   branchId       Int?     @map("branch_id")

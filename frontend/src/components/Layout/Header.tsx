@@ -50,6 +50,9 @@ function timeAgo(date: string) {
 export default function Header({ title, subtitle }: HeaderProps) {
   const { user, isAdmin, isSuperAdmin } = useAuth();
   const [superAdminForm, setSuperAdminForm] = useState({ name: '', email: '' });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const { company, reload: reloadCompany } = useCompany();
   const navigate = useNavigate();
 
@@ -108,7 +111,11 @@ export default function Header({ title, subtitle }: HeaderProps) {
   }
 
   function openProfile() {
-    if (user) setSuperAdminForm({ name: user.name, email: user.email });
+    if (user) {
+      setSuperAdminForm({ name: user.name, email: user.email });
+      setAvatarPreview((user as any).avatarUrl || null);
+      setAvatarFile(null);
+    }
     setCompanyForm({
       name: company?.name || '',
       nit: company?.nit || '',
@@ -242,9 +249,13 @@ export default function Header({ title, subtitle }: HeaderProps) {
               onClick={openProfile}
               className="flex items-center gap-3 bg-white rounded-xl border border-amber-200 px-3 py-2 shadow-sm hover:bg-amber-50 transition cursor-pointer"
             >
-              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-amber-600" />
-              </div>
+              {(user as any)?.avatarUrl ? (
+                <img src={(user as any).avatarUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+              ) : (
+                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-4 h-4 text-amber-600" />
+                </div>
+              )}
               <div className="text-right">
                 <p className="text-sm font-semibold text-gray-800 leading-tight">{user?.name}</p>
                 <p className="text-[11px] text-amber-500 leading-tight font-medium">Super Admin</p>
@@ -278,18 +289,35 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <form onSubmit={async (e) => {
             e.preventDefault();
             try {
-              await authApi.updateProfile({ name: superAdminForm.name, email: superAdminForm.email });
-              // Update local storage
-              const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email };
+              const res = await authApi.updateProfile({ name: superAdminForm.name, email: superAdminForm.email }, avatarFile || undefined);
+              const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email, avatarUrl: res.data?.avatarUrl || (user as any)?.avatarUrl };
               localStorage.setItem('wms_user', JSON.stringify(updated));
               setShowProfile(false);
               window.location.reload();
             } catch (err: any) { alert(err.message); }
           }} className="space-y-4">
             <div className="flex flex-col items-center">
-              <div className="w-24 h-24 bg-amber-50 rounded-2xl flex items-center justify-center border-2 border-amber-200">
-                <Building2 className="w-12 h-12 text-amber-500" />
+              <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setAvatarFile(file);
+                const reader = new FileReader();
+                reader.onloadend = () => setAvatarPreview(reader.result as string);
+                reader.readAsDataURL(file);
+              }} className="hidden" />
+              <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" className="w-24 h-24 rounded-2xl object-cover border-2 border-amber-200 shadow-sm" />
+                ) : (
+                  <div className="w-24 h-24 bg-amber-50 rounded-2xl flex items-center justify-center border-2 border-amber-200">
+                    <Building2 className="w-12 h-12 text-amber-500" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
               </div>
+              <p className="text-xs text-gray-400 mt-2">Haz clic para cambiar la foto</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authController from '../controllers/auth.controller';
 import { authMiddleware, adminOnly } from '../middlewares/auth.middleware';
+import { uploadAvatar } from '../config/uploadAvatar';
 
 const router = Router();
 
@@ -9,7 +10,7 @@ router.post('/login', authController.login);
 
 // Protegido - cualquier usuario autenticado
 router.get('/profile', authMiddleware, authController.getProfile);
-router.put('/profile', authMiddleware, authController.updateProfile);
+router.put('/profile', authMiddleware, uploadAvatar.single('avatar'), authController.updateProfile);
 
 // Protegido - solo admin
 router.get('/users', authMiddleware, adminOnly, authController.getUsers);
