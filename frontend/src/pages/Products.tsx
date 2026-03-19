@@ -20,6 +20,7 @@ export default function Products() {
   const [activeTab, setActiveTab] = useState<'all' | 'categories'>('all');
   const [openMenu, setOpenMenu] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showDetail, setShowDetail] = useState<Product | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -63,18 +64,54 @@ export default function Products() {
   function resetForm() {
     setFormData({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '' });
     clearImage();
+    setEditingProduct(null);
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  function openCreate() {
+    resetForm();
+    setShowModal(true);
+  }
+
+  function openEdit(product: Product) {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      sku: product.sku,
+      description: product.description || '',
+      categoryId: String(product.categoryId),
+      unitOfMeasure: product.unitOfMeasure,
+      currentStock: String(product.currentStock),
+      minimumStock: String(product.minimumStock),
+      warehouseLocation: product.warehouseLocation || '',
+      price: product.price ? String(Number(product.price)) : '',
+    });
+    setImagePreview(product.imageUrl || null);
+    setImageFile(null);
+    setShowModal(true);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await productApi.create({
-        ...formData,
-        categoryId: Number(formData.categoryId),
-        currentStock: Number(formData.currentStock),
-        minimumStock: Number(formData.minimumStock),
-        price: formData.price ? Number(formData.price) : undefined,
-      }, imageFile || undefined);
+      if (editingProduct) {
+        await productApi.update(editingProduct.id, {
+          name: formData.name,
+          description: formData.description || undefined,
+          categoryId: Number(formData.categoryId),
+          unitOfMeasure: formData.unitOfMeasure,
+          minimumStock: Number(formData.minimumStock),
+          warehouseLocation: formData.warehouseLocation || undefined,
+          price: formData.price ? Number(formData.price) : undefined,
+        }, imageFile || undefined);
+      } else {
+        await productApi.create({
+          ...formData,
+          categoryId: Number(formData.categoryId),
+          currentStock: Number(formData.currentStock),
+          minimumStock: Number(formData.minimumStock),
+          price: formData.price ? Number(formData.price) : undefined,
+        }, imageFile || undefined);
+      }
       setShowModal(false);
       resetForm();
       loadData();
@@ -162,7 +199,7 @@ export default function Products() {
                 </select>
 
                 <button
-                  onClick={() => setShowModal(true)}
+                  onClick={openCreate}
                   className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200"
                 >
                   <Plus className="w-4 h-4" /> Nuevo Producto
@@ -235,6 +272,12 @@ export default function Products() {
                               <Eye className="w-4 h-4 text-blue-500" /> Ver detalles
                             </button>
                             <button
+                              onClick={() => { openEdit(product); setOpenMenu(null); }}
+                              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                            >
+                              <Edit3 className="w-4 h-4 text-amber-500" /> Editar producto
+                            </button>
+                            <button
                               onClick={() => { handleDelete(product.id); setOpenMenu(null); }}
                               className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
                             >
@@ -288,8 +331,8 @@ export default function Products() {
       </div>
 
       {/* Create Product Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nuevo Producto" maxWidth="max-w-xl">
-        <form onSubmit={handleCreate} className="space-y-4">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm(); }} title={editingProduct ? 'Editar Producto' : 'Nuevo Producto'} maxWidth="max-w-xl">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
@@ -299,7 +342,8 @@ export default function Products() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
               <input required value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+                disabled={!!editingProduct}
+                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed" />
             </div>
           </div>
 
@@ -327,19 +371,21 @@ export default function Products() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Inicial</label>
-              <input type="number" min="0" value={formData.currentStock} onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
-            </div>
+          <div className={`grid gap-4 ${editingProduct ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {!editingProduct && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stock Inicial</label>
+                <input type="number" min="0" value={formData.currentStock} onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo</label>
               <input type="number" min="0" value={formData.minimumStock} onChange={(e) => setFormData({ ...formData, minimumStock: e.target.value })}
                 className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Precio</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Precio Unitario</label>
               <input type="number" min="0" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
             </div>
@@ -396,7 +442,7 @@ export default function Products() {
             </button>
             <button type="submit"
               className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">
-              Crear Producto
+              {editingProduct ? 'Guardar Cambios' : 'Crear Producto'}
             </button>
           </div>
         </form>
