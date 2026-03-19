@@ -12,6 +12,7 @@ interface CreateProductDTO {
   minimumStock?: number;
   imageUrl?: string;
   warehouseLocation?: string;
+  cost?: number;
   price?: number;
 }
 
@@ -24,6 +25,7 @@ interface UpdateProductDTO {
   minimumStock?: number;
   imageUrl?: string;
   warehouseLocation?: string;
+  cost?: number;
   price?: number;
   isActive?: boolean;
 }

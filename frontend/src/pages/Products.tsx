@@ -8,6 +8,7 @@ import Header from '../components/Layout/Header';
 import Modal from '../components/ui/Modal';
 import { productApi, categoryApi, reportApi, inventoryApi } from '../services/api';
 import { Product, Category, UNIT_LABELS, UnitOfMeasure } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface TopProduct {
   id: number;
@@ -19,6 +20,7 @@ interface TopProduct {
 }
 
 export default function Products() {
+  const { isAdmin } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export default function Products() {
   const [addStock, setAddStock] = useState('');
   const [formData, setFormData] = useState({
     name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT' as UnitOfMeasure,
-    currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '',
+    currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '',
   });
 
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function Products() {
   }
 
   function resetForm() {
-    setFormData({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '' });
+    setFormData({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '' });
     clearImage();
     setEditingProduct(null);
     setAddStock('');
@@ -98,6 +100,7 @@ export default function Products() {
       currentStock: String(product.currentStock),
       minimumStock: String(product.minimumStock),
       warehouseLocation: product.warehouseLocation || '',
+      cost: product.cost ? String(Number(product.cost)) : '',
       price: product.price ? String(Number(product.price)) : '',
     });
     setImagePreview(product.imageUrl || null);
@@ -116,6 +119,7 @@ export default function Products() {
           unitOfMeasure: formData.unitOfMeasure,
           minimumStock: Number(formData.minimumStock),
           warehouseLocation: formData.warehouseLocation || undefined,
+          cost: formData.cost ? Number(formData.cost) : undefined,
           price: formData.price ? Number(formData.price) : undefined,
         }, imageFile || undefined);
 
@@ -135,6 +139,7 @@ export default function Products() {
           categoryId: Number(formData.categoryId),
           currentStock: Number(formData.currentStock),
           minimumStock: Number(formData.minimumStock),
+          cost: formData.cost ? Number(formData.cost) : undefined,
           price: formData.price ? Number(formData.price) : undefined,
         }, imageFile || undefined);
       }
@@ -459,11 +464,50 @@ export default function Products() {
                 className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Precio Unitario</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Precio de Venta</label>
               <input type="number" min="0" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
             </div>
           </div>
+
+          {/* Costo y Margen - Solo Admin */}
+          {isAdmin && (
+            <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-100 space-y-3">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Costos y Utilidad (solo admin)</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Costo de adquisición</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                    <input type="number" min="0" step="0.01" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full pl-7 pr-3 py-2.5 bg-white rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Precio de venta</label>
+                  <div className="px-3 py-2.5 bg-white rounded-xl border border-gray-200 text-sm font-semibold text-gray-700">
+                    {formData.price ? `$${Number(formData.price).toLocaleString('es-CO', { minimumFractionDigits: 2 })}` : '—'}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Margen de utilidad</label>
+                  {formData.cost && formData.price && Number(formData.cost) > 0 ? (
+                    <div className="px-3 py-2.5 bg-white rounded-xl border border-gray-200">
+                      <p className={`text-sm font-bold ${((Number(formData.price) - Number(formData.cost)) / Number(formData.cost) * 100) > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {((Number(formData.price) - Number(formData.cost)) / Number(formData.cost) * 100).toFixed(1)}%
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        ${(Number(formData.price) - Number(formData.cost)).toLocaleString('es-CO', { minimumFractionDigits: 2 })} / ud
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="px-3 py-2.5 bg-white rounded-xl border border-gray-200 text-sm text-gray-400">—</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Image Upload */}
           <div>

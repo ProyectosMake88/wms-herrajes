@@ -47,6 +47,7 @@ export class ProductController {
       if (data.categoryId) data.categoryId = Number(data.categoryId);
       if (data.currentStock) data.currentStock = Number(data.currentStock);
       if (data.minimumStock) data.minimumStock = Number(data.minimumStock);
+      if (data.cost) data.cost = Number(data.cost);
       if (data.price) data.price = Number(data.price);
 
       // Si se subió una imagen, guardar la ruta
@@ -66,6 +67,7 @@ export class ProductController {
       const data = { ...req.body };
       if (data.categoryId) data.categoryId = Number(data.categoryId);
       if (data.minimumStock) data.minimumStock = Number(data.minimumStock);
+      if (data.cost) data.cost = Number(data.cost);
       if (data.price) data.price = Number(data.price);
 
       if (req.file) {

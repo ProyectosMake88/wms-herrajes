@@ -20,6 +20,7 @@ export interface Product {
   isLowStock: boolean;
   imageUrl: string | null;
   warehouseLocation: string | null;
+  cost: string | null;
   price: string | null;
   isActive: boolean;
   createdAt: string;
