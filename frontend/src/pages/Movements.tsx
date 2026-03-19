@@ -20,6 +20,28 @@ export default function Movements() {
     salePrice: '', reason: '', responsible: '', notes: '',
   });
 
+  // Pre-llenar precio al seleccionar producto cuando es salida
+  function handleProductChange(productId: string) {
+    const product = products.find((p) => p.id === Number(productId));
+    const price = product?.price ? Number(product.price).toFixed(2) : '';
+    setFormData((prev) => ({
+      ...prev,
+      productId,
+      salePrice: prev.type === 'EXIT' ? price : prev.salePrice,
+    }));
+  }
+
+  // Pre-llenar precio al cambiar a salida
+  function handleTypeChange(type: 'ENTRY' | 'EXIT') {
+    const product = products.find((p) => p.id === Number(formData.productId));
+    const price = product?.price ? Number(product.price).toFixed(2) : '';
+    setFormData((prev) => ({
+      ...prev,
+      type,
+      salePrice: type === 'EXIT' ? price : '',
+    }));
+  }
+
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
@@ -177,7 +199,7 @@ export default function Movements() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Producto *</label>
-              <select required value={formData.productId} onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+              <select required value={formData.productId} onChange={(e) => handleProductChange(e.target.value)}
                 className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none">
                 <option value="">Seleccionar...</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
@@ -186,11 +208,11 @@ export default function Movements() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setFormData({ ...formData, type: 'ENTRY' })}
+                <button type="button" onClick={() => handleTypeChange('ENTRY')}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${formData.type === 'ENTRY' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
                   Entrada
                 </button>
-                <button type="button" onClick={() => setFormData({ ...formData, type: 'EXIT' })}
+                <button type="button" onClick={() => handleTypeChange('EXIT')}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${formData.type === 'EXIT' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
                   Salida
                 </button>
