@@ -52,7 +52,13 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const [superAdminForm, setSuperAdminForm] = useState({ name: '', email: '' });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem('wms_user');
+      if (saved) return JSON.parse(saved).avatarUrl || null;
+    } catch {}
+    return null;
+  });
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Load avatar from DB on mount
