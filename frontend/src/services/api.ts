@@ -179,6 +179,17 @@ export const organizationApi = {
   toggleActive: (id: number) => request<any>(`/organizations/${id}/toggle`, { method: 'PUT' }),
 };
 
+// Branch Stock
+export const branchStockApi = {
+  getAvailable: (organizationId?: number) => {
+    const query = organizationId ? `?organizationId=${organizationId}` : '';
+    return request<any>(`/branch-stock/available${query}`);
+  },
+  getByBranch: (branchId: number) => request<any>(`/branch-stock/branch/${branchId}`),
+  assign: (data: { productId: number; branchId: number; quantity: number }) =>
+    request<any>('/branch-stock/assign', { method: 'POST', body: JSON.stringify(data) }),
+};
+
 // Branches
 export const branchApi = {
   getAll: () => request<any>('/branches'),

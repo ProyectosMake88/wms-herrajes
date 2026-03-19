@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/Layout/Header';
 import Modal from '../components/ui/Modal';
-import { branchApi, productApi, categoryApi, inventoryApi } from '../services/api';
+import { branchApi, productApi, categoryApi, inventoryApi, branchStockApi } from '../services/api';
 import { Product, Category, UNIT_LABELS, UnitOfMeasure } from '../types';
 
 interface Branch {
@@ -71,12 +71,22 @@ export default function Branches() {
     setSelectedBranch(branch);
     setLoadingDetail(true);
     try {
-      const [brDetail, prodRes] = await Promise.all([
+      const [brDetail, stockRes, prodRes] = await Promise.all([
         branchApi.getById(branch.id),
+        branchStockApi.getByBranch(branch.id),
         productApi.getAll({ branchId: String(branch.id) }),
       ]);
       setSelectedBranch(brDetail.data);
-      setBranchProducts(prodRes.data);
+      // Combine: products assigned via BranchStock + products directly in branch
+      const stockProducts = (stockRes.data || []).map((bs: any) => ({
+        ...bs.product,
+        currentStock: bs.quantity, // Override with branch-specific stock
+        _branchStockId: bs.id,
+      }));
+      // Also keep direct branch products that aren't in branchStocks
+      const stockProductIds = stockProducts.map((p: any) => p.id);
+      const directProducts = (prodRes.data || []).filter((p: any) => !stockProductIds.includes(p.id));
+      setBranchProducts([...stockProducts, ...directProducts]);
     } catch (error) {
       console.error(error);
     } finally {
@@ -173,11 +183,9 @@ export default function Branches() {
 
   async function openAssignProduct() {
     try {
-      // Get ALL products (from all branches and unassigned)
-      const res = await productApi.getAll();
-      // Filter: only products with stock > 0 that are NOT already in this branch
-      const branchProductIds = branchProducts.map(p => p.id);
-      const available = (res.data as Product[]).filter(p => p.currentStock > 0 && !branchProductIds.includes(p.id));
+      const res = await branchStockApi.getAvailable();
+      // Only products with available stock > 0
+      const available = (res.data || []).filter((p: any) => p.availableStock > 0);
       setOrgProducts(available);
       setSelectedProductId('');
       setAssignQuantity('');
@@ -189,55 +197,16 @@ export default function Branches() {
   async function handleAssignProduct(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedBranch || !selectedProductId || !assignQuantity) return;
-    const sourceProduct = orgProducts.find(p => p.id === Number(selectedProductId));
-    if (!sourceProduct) return;
-    const qty = Number(assignQuantity);
-    if (qty > sourceProduct.currentStock) { alert(`Stock insuficiente. Disponible: ${sourceProduct.currentStock}`); return; }
-
     try {
-      // 1. Create new product in branch (copy of source)
-      await productApi.create({
-        name: sourceProduct.name,
-        sku: `${sourceProduct.sku}-${selectedBranch.code}`,
-        description: sourceProduct.description || '',
-        categoryId: sourceProduct.categoryId,
+      await branchStockApi.assign({
+        productId: Number(selectedProductId),
         branchId: selectedBranch.id,
-        unitOfMeasure: sourceProduct.unitOfMeasure,
-        currentStock: qty,
-        minimumStock: sourceProduct.minimumStock,
-        warehouseLocation: '',
-        cost: sourceProduct.cost ? Number(sourceProduct.cost) : undefined,
-        price: sourceProduct.price ? Number(sourceProduct.price) : undefined,
+        quantity: Number(assignQuantity),
       });
-
-      // 2. Reduce source product stock via EXIT movement
-      await inventoryApi.registerMovement({
-        productId: sourceProduct.id,
-        type: 'EXIT',
-        quantity: qty,
-        reason: `Transferencia a sede ${selectedBranch.name}`,
-        responsible: 'Administrador',
-      });
-
       setShowAssignProduct(false);
       openBranchDetail(selectedBranch);
     } catch (error: any) {
-      // If SKU already exists, just add stock to existing branch product
-      if (error.message?.includes('Unique constraint')) {
-        try {
-          const existing = branchProducts.find(p => p.name === sourceProduct.name);
-          if (existing) {
-            await inventoryApi.registerMovement({ productId: existing.id, type: 'ENTRY', quantity: qty, reason: `Transferencia desde inventario general`, responsible: 'Administrador' });
-            await inventoryApi.registerMovement({ productId: sourceProduct.id, type: 'EXIT', quantity: qty, reason: `Transferencia a sede ${selectedBranch.name}`, responsible: 'Administrador' });
-            setShowAssignProduct(false);
-            openBranchDetail(selectedBranch);
-          } else {
-            alert(error.message);
-          }
-        } catch (e2: any) { alert(e2.message); }
-      } else {
-        alert(error.message);
-      }
+      alert(error.message);
     }
   }
 
@@ -602,11 +571,11 @@ export default function Branches() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800">{p.name}</p>
-                    <p className="text-xs text-gray-500">{p.sku} · {p.category?.name} {p.branch ? `· Sede: ${p.branch.name}` : '· Sin sede'}</p>
+                    <p className="text-xs text-gray-500">{p.sku} · {p.category?.name} · Stock total: {p.currentStock}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-400">Disponible</p>
-                    <p className={`text-lg font-bold ${p.isLowStock ? 'text-amber-500' : 'text-emerald-600'}`}>{p.currentStock}</p>
+                    <p className="text-lg font-bold text-emerald-600">{(p as any).availableStock ?? p.currentStock}</p>
                   </div>
                 </div>
               ))}
@@ -617,28 +586,33 @@ export default function Branches() {
 
             {/* Quantity */}
             {selectedProductId && (() => {
-              const sp = orgProducts.find(p => p.id === Number(selectedProductId));
+              const sp: any = orgProducts.find(p => p.id === Number(selectedProductId));
               if (!sp) return null;
+              const avail = sp.availableStock ?? sp.currentStock;
               return (
                 <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-bold text-gray-800">{sp.name}</p>
-                    <p className="text-xs text-gray-500">Stock disponible: <span className="font-bold text-emerald-600">{sp.currentStock}</span></p>
+                    <div className="text-right text-xs text-gray-500">
+                      <p>Stock total: <span className="font-bold text-gray-700">{sp.currentStock}</span></p>
+                      <p>Ya asignado: <span className="font-bold text-amber-600">{sp.totalAssigned || 0}</span></p>
+                      <p>Disponible: <span className="font-bold text-emerald-600">{avail}</span></p>
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-white rounded-xl p-3 text-center">
-                      <p className="text-[10px] text-gray-400 font-medium uppercase">Origen</p>
-                      <p className="text-lg font-bold text-gray-800">{sp.currentStock}</p>
+                      <p className="text-[10px] text-gray-400 font-medium uppercase">Disponible</p>
+                      <p className="text-lg font-bold text-emerald-600">{avail}</p>
                     </div>
                     <div className="bg-white rounded-xl p-3 text-center">
                       <p className="text-[10px] text-gray-400 font-medium uppercase">Asignar</p>
-                      <input required type="number" min="1" max={sp.currentStock} value={assignQuantity} onChange={(e) => setAssignQuantity(e.target.value)}
+                      <input required type="number" min="1" max={avail} value={assignQuantity} onChange={(e) => setAssignQuantity(e.target.value)}
                         placeholder="0"
                         className="w-full text-center text-lg font-bold text-primary-600 bg-transparent border-none focus:outline-none" />
                     </div>
                     <div className="bg-white rounded-xl p-3 text-center">
                       <p className="text-[10px] text-gray-400 font-medium uppercase">Quedará</p>
-                      <p className="text-lg font-bold text-amber-600">{sp.currentStock - (Number(assignQuantity) || 0)}</p>
+                      <p className="text-lg font-bold text-amber-600">{avail - (Number(assignQuantity) || 0)}</p>
                     </div>
                   </div>
                 </div>
