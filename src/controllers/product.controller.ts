@@ -6,6 +6,7 @@ export class ProductController {
     try {
       const filters = {
         categoryId: req.query.categoryId ? Number(req.query.categoryId) : undefined,
+        branchId: req.query.branchId ? Number(req.query.branchId) : undefined,
         isLowStock: req.query.isLowStock === 'true' ? true : req.query.isLowStock === 'false' ? false : undefined,
         isActive: req.query.isActive === 'false' ? false : true,
       };
@@ -45,6 +46,7 @@ export class ProductController {
       const data = { ...req.body };
       // Convertir campos numéricos que vienen como string desde FormData
       if (data.categoryId) data.categoryId = Number(data.categoryId);
+      if (data.branchId) data.branchId = Number(data.branchId);
       if (data.currentStock) data.currentStock = Number(data.currentStock);
       if (data.minimumStock) data.minimumStock = Number(data.minimumStock);
       if (data.cost) data.cost = Number(data.cost);

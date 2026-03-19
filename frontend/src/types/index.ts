@@ -21,6 +21,8 @@ export interface Product {
   imageUrl: string | null;
   warehouseLocation: string | null;
   cost: string | null;
+  branchId: number | null;
+  branch?: { id: number; name: string; code: string } | null;
   price: string | null;
   isActive: boolean;
   createdAt: string;

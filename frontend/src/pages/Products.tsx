@@ -6,9 +6,11 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import Header from '../components/Layout/Header';
 import Modal from '../components/ui/Modal';
-import { productApi, categoryApi, reportApi, inventoryApi } from '../services/api';
+import { productApi, categoryApi, reportApi, inventoryApi, branchApi } from '../services/api';
 import { Product, Category, UNIT_LABELS, UnitOfMeasure } from '../types';
 import { useAuth } from '../context/AuthContext';
+
+interface Branch { id: number; name: string; code: string; }
 
 interface TopProduct {
   id: number;
@@ -24,8 +26,10 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterBranch, setFilterBranch] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'categories'>('all');
   const [openMenu, setOpenMenu] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -37,7 +41,7 @@ export default function Products() {
   const [topSelling, setTopSelling] = useState<TopProduct[]>([]);
   const [addStock, setAddStock] = useState('');
   const [formData, setFormData] = useState({
-    name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT' as UnitOfMeasure,
+    name: '', sku: '', description: '', categoryId: '', branchId: '', unitOfMeasure: 'UNIT' as UnitOfMeasure,
     currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '',
   });
 
@@ -47,14 +51,18 @@ export default function Products() {
 
   async function loadData() {
     try {
-      const [prodRes, catRes, topRes] = await Promise.all([
-        productApi.getAll(),
+      const params: Record<string, string> = {};
+      if (filterBranch) params.branchId = filterBranch;
+      const [prodRes, catRes, topRes, branchRes] = await Promise.all([
+        productApi.getAll(params),
         categoryApi.getAll(),
         reportApi.getTopSelling(),
+        branchApi.getAll(),
       ]);
       setProducts(prodRes.data);
       setCategories(catRes.data);
       setTopSelling(topRes.data.products || []);
+      setBranches(branchRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -78,7 +86,7 @@ export default function Products() {
   }
 
   function resetForm() {
-    setFormData({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '' });
+    setFormData({ name: '', sku: '', description: '', categoryId: '', branchId: filterBranch || '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', cost: '', price: '' });
     clearImage();
     setEditingProduct(null);
     setAddStock('');
@@ -96,6 +104,7 @@ export default function Products() {
       sku: product.sku,
       description: product.description || '',
       categoryId: String(product.categoryId),
+      branchId: product.branchId ? String(product.branchId) : '',
       unitOfMeasure: product.unitOfMeasure,
       currentStock: String(product.currentStock),
       minimumStock: String(product.minimumStock),
@@ -137,6 +146,7 @@ export default function Products() {
         await productApi.create({
           ...formData,
           categoryId: Number(formData.categoryId),
+          branchId: formData.branchId ? Number(formData.branchId) : undefined,
           currentStock: Number(formData.currentStock),
           minimumStock: Number(formData.minimumStock),
           cost: formData.cost ? Number(formData.cost) : undefined,
@@ -160,6 +170,9 @@ export default function Products() {
       alert(error.message);
     }
   }
+
+  // Reload when branch filter changes
+  useEffect(() => { loadData(); }, [filterBranch]);
 
   const filtered = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -220,6 +233,17 @@ export default function Products() {
                 </div>
 
                 <select
+                  value={filterBranch}
+                  onChange={(e) => setFilterBranch(e.target.value)}
+                  className="px-3 py-2 bg-primary-50 rounded-xl border border-primary-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 text-primary-700 font-medium"
+                >
+                  <option value="">Todas las sedes</option>
+                  {branches.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                  ))}
+                </select>
+
+                <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
                   className="px-3 py-2 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
@@ -247,6 +271,7 @@ export default function Products() {
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Producto</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Categoría</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sede</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ubicación</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Unidad</th>
                     <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock</th>
@@ -278,6 +303,7 @@ export default function Products() {
                         </div>
                       </td>
                       <td className="px-6 py-3.5 text-sm text-gray-600">{product.category?.name}</td>
+                      <td className="px-6 py-3.5 text-sm text-primary-600 font-medium">{product.branch?.name || '—'}</td>
                       <td className="px-6 py-3.5 text-sm text-gray-500">{product.warehouseLocation || '—'}</td>
                       <td className="px-6 py-3.5 text-sm text-gray-500">{UNIT_LABELS[product.unitOfMeasure]}</td>
                       <td className="px-6 py-3.5 text-right">
@@ -322,7 +348,7 @@ export default function Products() {
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="text-center py-12 text-gray-400">
+                      <td colSpan={9} className="text-center py-12 text-gray-400">
                         No se encontraron productos
                       </td>
                     </tr>
@@ -402,6 +428,16 @@ export default function Products() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
             <input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+          </div>
+
+          {/* Sede */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sede *</label>
+            <select required value={formData.branchId} onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+              className="w-full px-3 py-2.5 bg-primary-50 rounded-xl border border-primary-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none text-primary-700 font-medium">
+              <option value="">Seleccionar sede...</option>
+              {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -2,11 +2,15 @@ import { useEffect, useState } from 'react';
 import { Plus, Edit3, Trash2, Tags, Package, AlertTriangle, ArrowLeft, Eye, X } from 'lucide-react';
 import Header from '../components/Layout/Header';
 import Modal from '../components/ui/Modal';
-import { categoryApi, productApi } from '../services/api';
+import { categoryApi, productApi, branchApi } from '../services/api';
 import { Category, Product, UNIT_LABELS } from '../types';
+
+interface Branch { id: number; name: string; code: string; }
 
 export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [filterBranch, setFilterBranch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
@@ -22,10 +26,16 @@ export default function Categories() {
 
   useEffect(() => { loadData(); }, []);
 
+  // Reload category products when branch filter changes
+  useEffect(() => {
+    if (selectedCategory) openCategoryDetail(selectedCategory);
+  }, [filterBranch]);
+
   async function loadData() {
     try {
-      const res = await categoryApi.getAll();
+      const [res, brRes] = await Promise.all([categoryApi.getAll(), branchApi.getAll()]);
       setCategories(res.data);
+      setBranches(brRes.data);
     } catch (error) {
       console.error(error);
     } finally {
@@ -37,7 +47,9 @@ export default function Categories() {
     setSelectedCategory(cat);
     setLoadingProducts(true);
     try {
-      const res = await productApi.getAll({ categoryId: String(cat.id) });
+      const params: Record<string, string> = { categoryId: String(cat.id) };
+      if (filterBranch) params.branchId = filterBranch;
+      const res = await productApi.getAll(params);
       setCategoryProducts(res.data);
     } catch (error) {
       console.error(error);
@@ -103,14 +115,24 @@ export default function Categories() {
     return (
       <div>
         {/* Header with back button */}
-        <div className="flex items-center gap-4 mb-6">
-          <button onClick={closeCategoryDetail} className="p-2.5 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition shadow-sm">
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{selectedCategory.name}</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{selectedCategory.description || 'Sin descripción'}</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button onClick={closeCategoryDetail} className="p-2.5 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition shadow-sm">
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{selectedCategory.name}</h1>
+              <p className="text-sm text-gray-500 mt-0.5">{selectedCategory.description || 'Sin descripción'}</p>
+            </div>
           </div>
+          <select
+            value={filterBranch}
+            onChange={(e) => { setFilterBranch(e.target.value); }}
+            className="px-3 py-2 bg-primary-50 rounded-xl border border-primary-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 text-primary-700 font-medium"
+          >
+            <option value="">Todas las sedes</option>
+            {branches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}
+          </select>
         </div>
 
         {/* Stats */}
@@ -294,7 +316,15 @@ export default function Categories() {
     <div>
       <Header title="Categorías" subtitle="Administra las categorías de herrajes" />
 
-      <div className="flex justify-end mb-5">
+      <div className="flex items-center justify-between mb-5">
+        <select
+          value={filterBranch}
+          onChange={(e) => setFilterBranch(e.target.value)}
+          className="px-3 py-2 bg-primary-50 rounded-xl border border-primary-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 text-primary-700 font-medium"
+        >
+          <option value="">Todas las sedes</option>
+          {branches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}
+        </select>
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">
           <Plus className="w-4 h-4" /> Nueva Categoría
         </button>

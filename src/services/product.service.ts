@@ -7,6 +7,7 @@ interface CreateProductDTO {
   sku: string;
   barcode?: string;
   categoryId: number;
+  branchId?: number;
   unitOfMeasure: UnitOfMeasure;
   currentStock?: number;
   minimumStock?: number;
@@ -31,15 +32,19 @@ interface UpdateProductDTO {
 }
 
 export class ProductService {
-  async findAll(filters?: { categoryId?: number; isLowStock?: boolean; isActive?: boolean }) {
+  async findAll(filters?: { categoryId?: number; branchId?: number; isLowStock?: boolean; isActive?: boolean }) {
     const where: any = {};
     if (filters?.categoryId) where.categoryId = filters.categoryId;
+    if (filters?.branchId) where.branchId = filters.branchId;
     if (filters?.isLowStock !== undefined) where.isLowStock = filters.isLowStock;
     if (filters?.isActive !== undefined) where.isActive = filters.isActive;
 
     return prisma.product.findMany({
       where,
-      include: { category: { select: { id: true, name: true } } },
+      include: {
+        category: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true, code: true } },
+      },
       orderBy: { name: 'asc' },
     });
   }
