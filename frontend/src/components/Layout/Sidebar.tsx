@@ -8,13 +8,13 @@ import { useCompany } from '../../context/CompanyContext';
 
 const adminNav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/branches', icon: MapPin, label: 'Sedes' },
   { to: '/categories', icon: Tags, label: 'Categorías' },
   { to: '/products', icon: Package, label: 'Productos' },
   { to: '/movements', icon: ArrowLeftRight, label: 'Movimientos' },
   { to: '/reports', icon: BarChart3, label: 'Reportes' },
   { to: '/approvals', icon: ClipboardCheck, label: 'Aprobaciones' },
   { to: '/alerts', icon: AlertTriangle, label: 'Alertas Stock' },
-  { to: '/branches', icon: MapPin, label: 'Sedes' },
   { to: '/users', icon: Users, label: 'Usuarios' },
 ];
 
