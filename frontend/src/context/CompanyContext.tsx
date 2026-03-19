@@ -21,12 +21,13 @@ interface CompanyContextType {
 const CompanyContext = createContext<CompanyContextType | null>(null);
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
+  const { token, isSuperAdmin } = useAuth();
   const [company, setCompany] = useState<Company | null>(null);
 
   useEffect(() => {
-    if (token) loadCompany();
-  }, [token]);
+    // Super Admin no tiene perfil de empresa singleton
+    if (token && !isSuperAdmin) loadCompany();
+  }, [token, isSuperAdmin]);
 
   async function loadCompany() {
     try {

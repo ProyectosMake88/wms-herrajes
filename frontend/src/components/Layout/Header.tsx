@@ -235,22 +235,34 @@ export default function Header({ title, subtitle }: HeaderProps) {
           </div>
 
           {/* User / Company Button */}
-          <button
-            onClick={openProfile}
-            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-sm hover:bg-gray-50 transition cursor-pointer"
-          >
-            {company?.logoUrl ? (
-              <img src={company.logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
-            ) : (
-              <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-primary-600" />
+          {user?.role === 'SUPER_ADMIN' ? (
+            <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-sm">
+              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Building2 className="w-4 h-4 text-amber-600" />
               </div>
-            )}
-            <div className="text-right">
-              <p className="text-sm font-semibold text-gray-800 leading-tight">{user?.name}</p>
-              <p className="text-[11px] text-gray-400 leading-tight">{user?.role === 'ADMIN' ? 'Administrador' : 'Vendedor'}</p>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-gray-800 leading-tight">{user?.name}</p>
+                <p className="text-[11px] text-amber-500 leading-tight font-medium">Super Admin</p>
+              </div>
             </div>
-          </button>
+          ) : (
+            <button
+              onClick={openProfile}
+              className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-sm hover:bg-gray-50 transition cursor-pointer"
+            >
+              {company?.logoUrl ? (
+                <img src={company.logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
+              ) : (
+                <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-4 h-4 text-primary-600" />
+                </div>
+              )}
+              <div className="text-right">
+                <p className="text-sm font-semibold text-gray-800 leading-tight">{user?.name}</p>
+                <p className="text-[11px] text-gray-400 leading-tight">{user?.role === 'ADMIN' ? 'Administrador' : 'Vendedor'}</p>
+              </div>
+            </button>
+          )}
         </div>
       </header>
 
