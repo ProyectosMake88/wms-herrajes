@@ -55,7 +55,12 @@ export class AuthController {
   }
 
   async getProfile(req: AuthRequest, res: Response) {
-    res.json({ success: true, data: req.user });
+    try {
+      const user = await authService.getUserById(req.user!.id);
+      res.json({ success: true, data: user });
+    } catch (error: any) {
+      res.json({ success: true, data: req.user });
+    }
   }
 
   async updateProfile(req: AuthRequest, res: Response) {

@@ -289,13 +289,17 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <form onSubmit={async (e) => {
             e.preventDefault();
             try {
-              const res = await authApi.updateProfile(
+              await authApi.updateProfile(
                 { name: superAdminForm.name, email: superAdminForm.email },
                 avatarFile || undefined
               );
-              const avatarUrl = res?.data?.avatarUrl || (user as any)?.avatarUrl || null;
-              const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email, avatarUrl };
-              localStorage.setItem('wms_user', JSON.stringify(updated));
+              // Re-fetch fresh user data from DB
+              const token = localStorage.getItem('wms_token');
+              const profileRes = await fetch('/api/auth/profile', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+              const profileData = await profileRes.json();
+              if (profileData?.data) {
+                localStorage.setItem('wms_user', JSON.stringify(profileData.data));
+              }
               setShowProfile(false);
               window.location.reload();
             } catch (err: any) { alert(err.message || 'Error al guardar'); }

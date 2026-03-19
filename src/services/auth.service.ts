@@ -64,6 +64,13 @@ export class AuthService {
     };
   }
 
+  async getUserById(id: number) {
+    return prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true, avatarUrl: true, role: true, organizationId: true, branchId: true },
+    });
+  }
+
   async getAllUsers() {
     return prisma.user.findMany({
       select: { id: true, email: true, name: true, role: true, branchId: true, isActive: true, createdAt: true, branch: { select: { id: true, name: true, code: true } } },
