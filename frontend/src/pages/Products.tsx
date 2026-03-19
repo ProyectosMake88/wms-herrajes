@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Plus, Search, Filter, MoreHorizontal, Eye, Trash2,
-  AlertTriangle, Package, Edit3,
+  AlertTriangle, Package, Edit3, ImagePlus, X,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Legend, ResponsiveContainer, Tooltip } from 'recharts';
 import Header from '../components/Layout/Header';
@@ -21,6 +21,9 @@ export default function Products() {
   const [openMenu, setOpenMenu] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState<Product | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT' as UnitOfMeasure,
     currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '',
@@ -42,6 +45,26 @@ export default function Products() {
     }
   }
 
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function clearImage() {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function resetForm() {
+    setFormData({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '' });
+    clearImage();
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -51,9 +74,9 @@ export default function Products() {
         currentStock: Number(formData.currentStock),
         minimumStock: Number(formData.minimumStock),
         price: formData.price ? Number(formData.price) : undefined,
-      });
+      }, imageFile || undefined);
       setShowModal(false);
-      setFormData({ name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT', currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '' });
+      resetForm();
       loadData();
     } catch (error: any) {
       alert(error.message);
@@ -168,9 +191,13 @@ export default function Products() {
                       <td className="px-6 py-3.5 text-sm font-mono text-primary-600 font-medium">{product.sku}</td>
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-primary-50 rounded-lg flex items-center justify-center">
-                            <Package className="w-4 h-4 text-primary-500" />
-                          </div>
+                          {product.imageUrl ? (
+                            <img src={product.imageUrl} alt={product.name} className="w-9 h-9 rounded-lg object-cover border border-gray-200" />
+                          ) : (
+                            <div className="w-9 h-9 bg-primary-50 rounded-lg flex items-center justify-center">
+                              <Package className="w-4 h-4 text-primary-500" />
+                            </div>
+                          )}
                           <div>
                             <p className="text-sm font-medium text-gray-800">{product.name}</p>
                             {product.isLowStock && (
@@ -318,6 +345,44 @@ export default function Products() {
             </div>
           </div>
 
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del Producto</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            {imagePreview ? (
+              <div className="relative inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-32 h-32 object-cover rounded-xl border-2 border-primary-200 shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={clearImage}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center justify-center w-32 h-32 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-400 hover:bg-primary-50/30 transition cursor-pointer"
+              >
+                <ImagePlus className="w-8 h-8 text-gray-400 mb-1.5" />
+                <span className="text-xs text-gray-500 font-medium">Subir imagen</span>
+                <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG, WEBP</span>
+              </button>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación en Bodega</label>
             <input placeholder="Ej: Pasillo A, Estante 3" value={formData.warehouseLocation} onChange={(e) => setFormData({ ...formData, warehouseLocation: e.target.value })}
@@ -341,6 +406,19 @@ export default function Products() {
       <Modal isOpen={!!showDetail} onClose={() => setShowDetail(null)} title="Detalle del Producto">
         {showDetail && (
           <div className="space-y-3">
+            {/* Product Image */}
+            {showDetail.imageUrl ? (
+              <div className="flex justify-center mb-2">
+                <img src={showDetail.imageUrl} alt={showDetail.name} className="w-40 h-40 object-cover rounded-2xl border-2 border-gray-100 shadow-sm" />
+              </div>
+            ) : (
+              <div className="flex justify-center mb-2">
+                <div className="w-40 h-40 bg-gray-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-200">
+                  <Package className="w-12 h-12 text-gray-300" />
+                  <span className="text-xs text-gray-400 mt-1">Sin imagen</span>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">SKU</p><p className="text-sm font-bold font-mono">{showDetail.sku}</p></div>
               <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Categoría</p><p className="text-sm font-bold">{showDetail.category?.name}</p></div>
