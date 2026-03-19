@@ -21,7 +21,8 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  movements Movement[]
+  movements     Movement[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -62,8 +63,9 @@ model Product {
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
-  category   Category    @relation(fields: [categoryId], references: [id])
-  movements  Movement[]
+  category      Category       @relation(fields: [categoryId], references: [id])
+  movements     Movement[]
+  notifications Notification[]
 
   @@index([categoryId])
   @@index([sku])
@@ -96,8 +98,36 @@ model Movement {
 }
 
 // ============================================================
+// NOTIFICACIONES - Alertas de stock y registro de ventas
+// ============================================================
+model Notification {
+  id        Int              @id @default(autoincrement())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false) @map("is_read")
+  productId Int?             @map("product_id")
+  userId    Int?             @map("user_id") // Usuario que generó la acción
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  product Product? @relation(fields: [productId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================================
 // ENUMS
 // ============================================================
+enum NotificationType {
+  LOW_STOCK    // Alerta de stock bajo
+  OUT_OF_STOCK // Producto agotado
+  SALE         // Venta registrada por vendedor
+  ENTRY        // Entrada de inventario
+}
+
 enum UserRole {
   ADMIN   // Administrador - acceso total
   SELLER  // Vendedor - solo registrar salidas

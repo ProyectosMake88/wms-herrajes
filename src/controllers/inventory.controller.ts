@@ -1,12 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthRequest } from '../middlewares/auth.middleware';
 import inventoryService from '../services/inventory.service';
 
 export class InventoryController {
-  /**
-   * POST /api/inventory/movement
-   * Registra una Entrada o Salida de inventario
-   */
-  async registerMovement(req: Request, res: Response) {
+  async registerMovement(req: AuthRequest, res: Response) {
     try {
       const { productId, type, quantity, reason, responsible, notes } = req.body;
       const result = await inventoryService.registerMovement({
@@ -16,6 +13,7 @@ export class InventoryController {
         reason,
         responsible,
         notes,
+        userId: req.user?.id,
       });
 
       const statusMsg = result.product.isLowStock

@@ -128,3 +128,10 @@ export const authApi = {
     request<any>(`/auth/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUser: (id: number) => request<any>(`/auth/users/${id}`, { method: 'DELETE' }),
 };
+
+// Notifications
+export const notificationApi = {
+  getAll: () => request<any>('/notifications'),
+  markAsRead: (id: number) => request<any>(`/notifications/${id}/read`, { method: 'PUT' }),
+  markAllAsRead: () => request<any>('/notifications/read-all', { method: 'PUT' }),
+};

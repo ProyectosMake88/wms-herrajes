@@ -4,6 +4,7 @@ import categoryRoutes from './category.routes';
 import productRoutes from './product.routes';
 import inventoryRoutes from './inventory.routes';
 import reportRoutes from './report.routes';
+import notificationRoutes from './notification.routes';
 import { authMiddleware, adminOnly } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -16,5 +17,6 @@ router.use('/categories', authMiddleware, categoryRoutes);
 router.use('/products', authMiddleware, productRoutes);
 router.use('/inventory', authMiddleware, inventoryRoutes);
 router.use('/reports', authMiddleware, reportRoutes);
+router.use('/notifications', authMiddleware, notificationRoutes);
 
 export default router;
