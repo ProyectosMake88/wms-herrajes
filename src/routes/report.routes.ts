@@ -16,4 +16,7 @@ router.get('/movements', validateDateRange, reportController.getMovementsReport)
 // Reporte de productos con stock bajo
 router.get('/low-stock', reportController.getLowStockReport);
 
+// Top 10 productos más vendidos
+router.get('/top-selling', reportController.getTopSelling);
+
 export default router;

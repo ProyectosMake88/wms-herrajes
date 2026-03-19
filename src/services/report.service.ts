@@ -105,6 +105,56 @@ export class ReportService {
       })),
     };
   }
+  /**
+   * Top 10 productos más vendidos con valores reales de transacciones
+   */
+  async getTopSellingProducts() {
+    const movements = await prisma.movement.findMany({
+      where: { type: MovementType.EXIT },
+      include: { product: { select: { id: true, name: true, sku: true, price: true } } },
+    });
+
+    // Agrupar por producto
+    const productMap = new Map<number, {
+      id: number;
+      name: string;
+      sku: string;
+      totalQuantity: number;
+      totalRevenue: number;
+      transactions: number;
+    }>();
+
+    for (const mov of movements) {
+      if (!mov.product) continue;
+      const existing = productMap.get(mov.productId);
+      const revenue = mov.saleTotal ? Number(mov.saleTotal) : (mov.product.price ? Number(mov.product.price) * mov.quantity : 0);
+
+      if (existing) {
+        existing.totalQuantity += mov.quantity;
+        existing.totalRevenue += revenue;
+        existing.transactions += 1;
+      } else {
+        productMap.set(mov.productId, {
+          id: mov.product.id,
+          name: mov.product.name,
+          sku: mov.product.sku,
+          totalQuantity: mov.quantity,
+          totalRevenue: revenue,
+          transactions: 1,
+        });
+      }
+    }
+
+    const sorted = Array.from(productMap.values())
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
+      .slice(0, 10);
+
+    return {
+      totalSales: movements.length,
+      totalRevenue: sorted.reduce((sum, p) => sum + p.totalRevenue, 0),
+      products: sorted,
+    };
+  }
 }
 
 export default new ReportService();

@@ -118,6 +118,7 @@ export const reportApi = {
     return request<any>(`/reports/movements${query}`);
   },
   getLowStockReport: () => request<any>('/reports/low-stock'),
+  getTopSelling: () => request<any>('/reports/top-selling'),
 };
 
 // Auth / Users

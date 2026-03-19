@@ -66,6 +66,14 @@ export class ReportController {
       res.status(500).json({ success: false, message: error.message });
     }
   }
+  async getTopSelling(_req: Request, res: Response) {
+    try {
+      const report = await reportService.getTopSellingProducts();
+      res.json({ success: true, data: report });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
 }
 
 export default new ReportController();

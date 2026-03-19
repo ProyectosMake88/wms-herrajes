@@ -3,13 +3,20 @@ import {
   Plus, Search, Filter, MoreHorizontal, Eye, Trash2,
   AlertTriangle, Package, Edit3, ImagePlus, X,
 } from 'lucide-react';
-import { PieChart, Pie, Cell, Legend, ResponsiveContainer, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import Header from '../components/Layout/Header';
 import Modal from '../components/ui/Modal';
-import { productApi, categoryApi } from '../services/api';
+import { productApi, categoryApi, reportApi } from '../services/api';
 import { Product, Category, UNIT_LABELS, UnitOfMeasure } from '../types';
 
-const PIE_COLORS = ['#7c3aed', '#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#ec4899'];
+interface TopProduct {
+  id: number;
+  name: string;
+  sku: string;
+  totalQuantity: number;
+  totalRevenue: number;
+  transactions: number;
+}
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -25,6 +32,7 @@ export default function Products() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [topSelling, setTopSelling] = useState<TopProduct[]>([]);
   const [formData, setFormData] = useState({
     name: '', sku: '', description: '', categoryId: '', unitOfMeasure: 'UNIT' as UnitOfMeasure,
     currentStock: '0', minimumStock: '100', warehouseLocation: '', price: '',
@@ -36,9 +44,14 @@ export default function Products() {
 
   async function loadData() {
     try {
-      const [prodRes, catRes] = await Promise.all([productApi.getAll(), categoryApi.getAll()]);
+      const [prodRes, catRes, topRes] = await Promise.all([
+        productApi.getAll(),
+        categoryApi.getAll(),
+        reportApi.getTopSelling(),
+      ]);
       setProducts(prodRes.data);
       setCategories(catRes.data);
+      setTopSelling(topRes.data.products || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -137,10 +150,11 @@ export default function Products() {
     return matchSearch && matchCategory;
   });
 
-  const categoryChartData = categories.map((c) => ({
-    name: c.name,
-    value: products.filter((p) => p.categoryId === c.id).length,
-  })).filter((d) => d.value > 0);
+  const topChartData = topSelling.map((p) => ({
+    name: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
+    ventas: p.totalRevenue,
+    cantidad: p.totalQuantity,
+  }));
 
   if (loading) {
     return (
@@ -301,31 +315,50 @@ export default function Products() {
           </div>
         </div>
 
-        {/* Right Sidebar - Category Chart */}
-        <div className="w-72 flex-shrink-0">
+        {/* Right Sidebar - Top 10 Selling */}
+        <div className="w-80 flex-shrink-0">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 sticky top-6">
-            <h3 className="text-base font-bold text-gray-800 mb-4">Productos por Categoría</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={categoryChartData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={4} dataKey="value">
-                  {categoryChartData.map((_e, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+            <h3 className="text-base font-bold text-gray-800 mb-1">Top 10 Más Vendidos</h3>
+            <p className="text-xs text-gray-400 mb-4">Por valor total de ventas</p>
+
+            {topSelling.length === 0 ? (
+              <div className="py-8 text-center">
+                <Package className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">Sin ventas registradas</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={topChartData} layout="vertical" margin={{ left: 0, right: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100} />
+                    <ReTooltip
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                      formatter={(value: number) => [`$${value.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 'Ventas']}
+                    />
+                    <Bar dataKey="ventas" fill="#7c3aed" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+
+                <div className="mt-4 space-y-2.5 max-h-[300px] overflow-y-auto">
+                  {topSelling.map((item, i) => (
+                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition">
+                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white ${i < 3 ? 'bg-primary-500' : 'bg-gray-400'}`}>
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{item.name}</p>
+                        <p className="text-[10px] text-gray-400">{item.sku} · {item.transactions} ventas · {item.totalQuantity} uds</p>
+                      </div>
+                      <span className="text-xs font-bold text-emerald-600 flex-shrink-0">
+                        ${item.totalRevenue.toLocaleString('es-CO', { minimumFractionDigits: 0 })}
+                      </span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-3 space-y-2">
-              {categoryChartData.map((item, i) => (
-                <div key={item.name} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                    <span className="text-gray-600">{item.name}</span>
-                  </div>
-                  <span className="font-semibold text-gray-800">({item.value})</span>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>
