@@ -31,6 +31,15 @@ export class BranchStockController {
       res.status(500).json({ success: false, message: error.message });
     }
   }
+  async removeFromBranch(req: AuthRequest, res: Response) {
+    try {
+      const { productId, branchId } = req.body;
+      const result = await branchStockService.removeFromBranch(Number(productId), Number(branchId));
+      res.json({ success: true, data: result, message: `Stock devuelto al inventario general (${result.removedQuantity} unidades)` });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
 }
 
 export default new BranchStockController();

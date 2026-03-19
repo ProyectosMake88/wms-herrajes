@@ -83,6 +83,16 @@ export class BranchStockService {
     });
   }
 
+  /** Quitar producto de una sede - devuelve stock al pool de la organización */
+  async removeFromBranch(productId: number, branchId: number) {
+    const stock = await prisma.branchStock.findUnique({
+      where: { branchId_productId: { branchId, productId } },
+    });
+    if (!stock) throw new Error('Este producto no está asignado a esta sede');
+    await prisma.branchStock.delete({ where: { id: stock.id } });
+    return { removedQuantity: stock.quantity };
+  }
+
   /** Reducir stock de una sede (venta) */
   async reduceStock(productId: number, branchId: number, quantity: number) {
     const stock = await prisma.branchStock.findUnique({

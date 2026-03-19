@@ -188,6 +188,8 @@ export const branchStockApi = {
   getByBranch: (branchId: number) => request<any>(`/branch-stock/branch/${branchId}`),
   assign: (data: { productId: number; branchId: number; quantity: number }) =>
     request<any>('/branch-stock/assign', { method: 'POST', body: JSON.stringify(data) }),
+  remove: (data: { productId: number; branchId: number }) =>
+    request<any>('/branch-stock/remove', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // Branches

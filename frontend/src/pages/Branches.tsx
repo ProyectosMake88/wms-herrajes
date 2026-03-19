@@ -230,6 +230,17 @@ export default function Branches() {
     }
   }
 
+  async function handleRemoveFromBranch(product: Product) {
+    if (!selectedBranch) return;
+    if (!confirm(`¿Quitar "${product.name}" de esta sede? Las ${product.currentStock} unidades volverán al inventario general.`)) return;
+    try {
+      await branchStockApi.remove({ productId: product.id, branchId: selectedBranch.id });
+      openBranchDetail(selectedBranch);
+    } catch (error: any) {
+      alert(error.message);
+    }
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-96"><div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>;
   }
@@ -386,9 +397,12 @@ export default function Branches() {
                           <MoreHorizontal className="w-4 h-4 text-gray-500" />
                         </button>
                         {openMenu === p.id && (
-                          <div className="absolute right-5 top-10 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 min-w-[180px]">
+                          <div className="absolute right-5 top-10 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 min-w-[200px]">
                             <button onClick={() => openProductEdit(p)} className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition">
                               <Edit3 className="w-4 h-4 text-amber-500" /> Editar producto
+                            </button>
+                            <button onClick={() => { setOpenMenu(null); handleRemoveFromBranch(p); }} className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition">
+                              <Trash2 className="w-4 h-4" /> Quitar de esta sede
                             </button>
                           </div>
                         )}
