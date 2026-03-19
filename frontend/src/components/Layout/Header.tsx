@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell, User, AlertTriangle, ShoppingBag, ArrowDownToLine,
   PackageX, Check, CheckCheck, Building2, Camera, Save, X,
-  Clock, CheckCircle, XCircle,
+  Clock, CheckCircle, XCircle, ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
@@ -49,6 +50,7 @@ function timeAgo(date: string) {
 export default function Header({ title, subtitle }: HeaderProps) {
   const { user, isAdmin } = useAuth();
   const { company, reload: reloadCompany } = useCompany();
+  const navigate = useNavigate();
 
   // Notifications state
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -187,10 +189,22 @@ export default function Header({ title, subtitle }: HeaderProps) {
                     </div>
                   ) : (
                     notifications.map((notif) => {
-                      const config = typeConfig[notif.type];
+                      const config = typeConfig[notif.type] || typeConfig.ENTRY;
                       const Icon = config.icon;
+                      const isClickable = notif.type === 'PENDING_ENTRY' && isAdmin;
+                      const handleClick = () => {
+                        if (isClickable) {
+                          handleMarkAsRead(notif.id);
+                          setShowNotifications(false);
+                          navigate('/approvals');
+                        }
+                      };
                       return (
-                        <div key={notif.id} className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 transition hover:bg-gray-50/80 ${!notif.isRead ? 'bg-primary-50/30' : ''}`}>
+                        <div
+                          key={notif.id}
+                          onClick={handleClick}
+                          className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 transition hover:bg-gray-50/80 ${!notif.isRead ? 'bg-primary-50/30' : ''} ${isClickable ? 'cursor-pointer' : ''}`}
+                        >
                           <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${config.bg}`}>
                             <Icon className={`w-4 h-4 ${config.color}`} />
                           </div>
@@ -200,6 +214,11 @@ export default function Header({ title, subtitle }: HeaderProps) {
                               <span className="text-[10px] text-gray-400 flex-shrink-0">{timeAgo(notif.createdAt)}</span>
                             </div>
                             <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{notif.message}</p>
+                            {isClickable && (
+                              <span className="inline-flex items-center gap-1 mt-1.5 text-[11px] text-primary-600 font-semibold hover:text-primary-700">
+                                <ExternalLink className="w-3 h-3" /> Revisar solicitud
+                              </span>
+                            )}
                           </div>
                           {!notif.isRead && (
                             <button onClick={(e) => { e.stopPropagation(); handleMarkAsRead(notif.id); }} className="p-1 hover:bg-gray-200 rounded-md transition flex-shrink-0 mt-0.5" title="Marcar como leída">
