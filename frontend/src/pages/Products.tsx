@@ -125,6 +125,7 @@ export default function Products() {
           name: formData.name,
           description: formData.description || undefined,
           categoryId: Number(formData.categoryId),
+          branchId: formData.branchId ? Number(formData.branchId) : undefined,
           unitOfMeasure: formData.unitOfMeasure,
           minimumStock: Number(formData.minimumStock),
           warehouseLocation: formData.warehouseLocation || undefined,

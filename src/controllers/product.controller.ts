@@ -68,6 +68,7 @@ export class ProductController {
     try {
       const data = { ...req.body };
       if (data.categoryId) data.categoryId = Number(data.categoryId);
+      if (data.branchId) data.branchId = Number(data.branchId);
       if (data.minimumStock) data.minimumStock = Number(data.minimumStock);
       if (data.cost) data.cost = Number(data.cost);
       if (data.price) data.price = Number(data.price);

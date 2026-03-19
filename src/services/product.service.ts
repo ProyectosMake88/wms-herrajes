@@ -22,6 +22,7 @@ interface UpdateProductDTO {
   description?: string;
   barcode?: string;
   categoryId?: number;
+  branchId?: number;
   unitOfMeasure?: UnitOfMeasure;
   minimumStock?: number;
   imageUrl?: string;
