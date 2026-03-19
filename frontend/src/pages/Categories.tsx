@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit3, Trash2, Tags, Package, AlertTriangle, ArrowLeft, Eye } from 'lucide-react';
+import { Plus, Edit3, Trash2, Tags, Package, AlertTriangle, ArrowLeft, Eye, X } from 'lucide-react';
 import Header from '../components/Layout/Header';
 import Modal from '../components/ui/Modal';
 import { categoryApi, productApi } from '../services/api';
@@ -16,6 +16,9 @@ export default function Categories() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // Product detail view
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -165,7 +168,7 @@ export default function Categories() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {categoryProducts.map((product) => (
-                    <tr key={product.id} className="table-row-hover transition-colors">
+                    <tr key={product.id} onClick={() => setViewProduct(product)} className="table-row-hover transition-colors cursor-pointer">
                       <td className="px-6 py-3.5">
                         {product.imageUrl ? (
                           <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded-lg object-cover border border-gray-200" />
@@ -211,6 +214,77 @@ export default function Categories() {
             </div>
           )}
         </div>
+
+        {/* Product Detail Modal */}
+        {viewProduct && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setViewProduct(null)} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+              {/* Product Image */}
+              {viewProduct.imageUrl ? (
+                <div className="relative">
+                  <img src={viewProduct.imageUrl} alt={viewProduct.name} className="w-full h-64 object-cover" />
+                  <button onClick={() => setViewProduct(null)} className="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/60 rounded-xl transition">
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative w-full h-48 bg-gray-50 flex flex-col items-center justify-center">
+                  <Package className="w-16 h-16 text-gray-300" />
+                  <span className="text-sm text-gray-400 mt-2">Sin imagen</span>
+                  <button onClick={() => setViewProduct(null)} className="absolute top-3 right-3 p-2 bg-gray-200 hover:bg-gray-300 rounded-xl transition">
+                    <X className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+              )}
+
+              {/* Product Info */}
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{viewProduct.name}</h2>
+                    <p className="text-sm text-primary-600 font-mono mt-0.5">{viewProduct.sku}</p>
+                  </div>
+                  {viewProduct.isLowStock && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full">
+                      <AlertTriangle className="w-3 h-3" /> Stock Bajo
+                    </span>
+                  )}
+                </div>
+
+                {viewProduct.description && (
+                  <p className="text-sm text-gray-600 mb-4">{viewProduct.description}</p>
+                )}
+
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-gray-50 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-400 font-medium uppercase">Stock</p>
+                    <p className={`text-lg font-bold ${viewProduct.isLowStock ? 'text-red-500' : 'text-gray-800'}`}>{viewProduct.currentStock}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-400 font-medium uppercase">Mínimo</p>
+                    <p className="text-lg font-bold text-gray-600">{viewProduct.minimumStock}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-400 font-medium uppercase">Precio</p>
+                    <p className="text-lg font-bold text-emerald-600">{viewProduct.price ? `$${Number(viewProduct.price).toLocaleString('es-CO', { minimumFractionDigits: 2 })}` : '—'}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-400 font-medium uppercase">Unidad</p>
+                    <p className="text-sm font-semibold text-gray-700">{UNIT_LABELS[viewProduct.unitOfMeasure]}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-400 font-medium uppercase">Ubicación</p>
+                    <p className="text-sm font-semibold text-gray-700">{viewProduct.warehouseLocation || 'Sin asignar'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
