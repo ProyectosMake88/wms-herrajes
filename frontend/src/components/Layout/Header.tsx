@@ -236,7 +236,10 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
           {/* User / Company Button */}
           {user?.role === 'SUPER_ADMIN' ? (
-            <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-3 py-2 shadow-sm">
+            <button
+              onClick={openProfile}
+              className="flex items-center gap-3 bg-white rounded-xl border border-amber-200 px-3 py-2 shadow-sm hover:bg-amber-50 transition cursor-pointer"
+            >
               <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
                 <Building2 className="w-4 h-4 text-amber-600" />
               </div>
@@ -244,7 +247,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
                 <p className="text-sm font-semibold text-gray-800 leading-tight">{user?.name}</p>
                 <p className="text-[11px] text-amber-500 leading-tight font-medium">Super Admin</p>
               </div>
-            </div>
+            </button>
           ) : (
             <button
               onClick={openProfile}
@@ -267,7 +270,29 @@ export default function Header({ title, subtitle }: HeaderProps) {
       </header>
 
       {/* Company Profile Modal */}
-      <Modal isOpen={showProfile} onClose={() => setShowProfile(false)} title="Perfil de la Empresa" maxWidth="max-w-xl">
+      <Modal isOpen={showProfile} onClose={() => setShowProfile(false)} title={user?.role === 'SUPER_ADMIN' ? 'Perfil Super Admin' : 'Perfil de la Empresa'} maxWidth="max-w-xl">
+        {/* Super Admin Profile */}
+        {user?.role === 'SUPER_ADMIN' && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center">
+              <div className="w-24 h-24 bg-amber-50 rounded-2xl flex items-center justify-center border-2 border-amber-200">
+                <Building2 className="w-12 h-12 text-amber-500" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Nombre</p><p className="text-sm font-bold">{user.name}</p></div>
+              <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Email</p><p className="text-sm font-bold">{user.email}</p></div>
+              <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Rol</p><p className="text-sm font-bold text-amber-600">Super Administrador</p></div>
+              <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Plataforma</p><p className="text-sm font-bold text-primary-600">AdVenty</p></div>
+            </div>
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+              <p className="text-xs text-amber-700 font-medium">Tienes acceso total a la plataforma. Puedes crear y gestionar organizaciones, ver estadísticas globales y administrar todos los datos.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Company Profile (Admin/Seller) */}
+        {user?.role !== 'SUPER_ADMIN' && (
         <form onSubmit={handleSaveProfile} className="space-y-5">
           {/* Logo Upload */}
           <div className="flex flex-col items-center">
@@ -343,6 +368,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
             </div>
           )}
         </form>
+        )}
       </Modal>
     </>
   );
