@@ -100,6 +100,8 @@ export default function Reports() {
   const [stockReport, setStockReport] = useState<StockReport | null>(null);
   const [movementsReport, setMovementsReport] = useState<MovementsReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filterResponsible, setFilterResponsible] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -145,6 +147,44 @@ export default function Reports() {
         stockBajo: data.lowStock,
       }))
     : [];
+
+  // Get unique responsibles from movements
+  const uniqueResponsibles = movementsReport
+    ? [...new Set(movementsReport.movements.map((m: any) => m.responsible))].sort()
+    : [];
+
+  // Filter movements
+  const filteredMovements = movementsReport
+    ? movementsReport.movements.filter((m: any) => {
+        if (filterResponsible && m.responsible !== filterResponsible) return false;
+        if (filterType && m.type !== filterType) return false;
+        return true;
+      })
+    : [];
+
+  // Recalculate summary for filtered data
+  const filteredSummary = movementsReport ? (() => {
+    const exits = filteredMovements.filter((m: any) => m.type === 'EXIT');
+    const entries = filteredMovements.filter((m: any) => m.type === 'ENTRY');
+    const totalSaleRevenue = exits.reduce((sum: number, m: any) => sum + (m.saleTotal ? Number(m.saleTotal) : 0), 0);
+    const totalCostOfSales = exits.reduce((sum: number, m: any) => {
+      const unitCost = m.product?.cost ? Number(m.product.cost) : 0;
+      return sum + (unitCost * m.quantity);
+    }, 0);
+    const totalProfit = totalSaleRevenue - totalCostOfSales;
+    return {
+      ...movementsReport.summary,
+      totalMovements: filteredMovements.length,
+      totalEntries: entries.length,
+      totalExits: exits.length,
+      totalEntryQuantity: entries.reduce((sum: number, m: any) => sum + m.quantity, 0),
+      totalExitQuantity: exits.reduce((sum: number, m: any) => sum + m.quantity, 0),
+      totalSaleRevenue,
+      totalCostOfSales,
+      totalProfit,
+      profitMargin: totalSaleRevenue > 0 ? (totalProfit / totalSaleRevenue) * 100 : 0,
+    };
+  })() : null;
 
   if (loading) {
     return <div className="flex items-center justify-center h-96"><div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>;
@@ -238,7 +278,7 @@ export default function Reports() {
         <div>
           {/* Date Range Filter */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
-            <div className="flex items-end gap-4">
+            <div className="flex items-end gap-4 flex-wrap">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
                 <input type="date" value={dateRange.startDate} onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
@@ -249,21 +289,55 @@ export default function Reports() {
                 <input type="date" value={dateRange.endDate} onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
                   className="px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
               </div>
-              <button onClick={loadMovementsReport}
+              <button onClick={() => { loadMovementsReport(); setFilterResponsible(''); setFilterType(''); }}
                 className="px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">
                 Generar Reporte
               </button>
             </div>
+
+            {/* Filtros adicionales */}
+            {movementsReport && (
+              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+                <span className="text-xs font-semibold text-gray-500 uppercase">Filtrar por:</span>
+                <select value={filterResponsible} onChange={(e) => setFilterResponsible(e.target.value)}
+                  className="px-3 py-2 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none">
+                  <option value="">Todos los responsables</option>
+                  {uniqueResponsibles.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
+                  className="px-3 py-2 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none">
+                  <option value="">Todos los tipos</option>
+                  <option value="ENTRY">Entradas</option>
+                  <option value="EXIT">Salidas (Ventas)</option>
+                </select>
+                {(filterResponsible || filterType) && (
+                  <button onClick={() => { setFilterResponsible(''); setFilterType(''); }}
+                    className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
-          {movementsReport && (
+          {movementsReport && filteredSummary && (
             <>
+              {/* Active filter indicator */}
+              {(filterResponsible || filterType) && (
+                <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-xl flex items-center gap-2">
+                  <span className="text-xs text-primary-700 font-medium">
+                    Filtro activo: {filterResponsible && `Responsable: ${filterResponsible}`} {filterType && `Tipo: ${filterType === 'EXIT' ? 'Salidas' : 'Entradas'}`}
+                    {' '}({filteredMovements.length} de {movementsReport.movements.length} movimientos)
+                  </span>
+                </div>
+              )}
+
               {/* Movement Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-5">
-                <StatsCard title="Total Movimientos" value={movementsReport.summary.totalMovements} icon={<BarChart3 className="w-6 h-6" />} color="purple" />
-                <StatsCard title="Entradas" value={movementsReport.summary.totalEntries} icon={<ArrowDownToLine className="w-6 h-6" />} color="green" subtitle={`${movementsReport.summary.totalEntryQuantity} unidades`} />
-                <StatsCard title="Salidas" value={movementsReport.summary.totalExits} icon={<ArrowUpFromLine className="w-6 h-6" />} color="red" subtitle={`${movementsReport.summary.totalExitQuantity} unidades`} />
-                <StatsCard title="Balance Neto" value={movementsReport.summary.totalEntryQuantity - movementsReport.summary.totalExitQuantity} icon={<Package className="w-6 h-6" />} color="blue" subtitle="Diferencia E/S" />
+                <StatsCard title="Total Movimientos" value={filteredSummary.totalMovements} icon={<BarChart3 className="w-6 h-6" />} color="purple" />
+                <StatsCard title="Entradas" value={filteredSummary.totalEntries} icon={<ArrowDownToLine className="w-6 h-6" />} color="green" subtitle={`${filteredSummary.totalEntryQuantity} unidades`} />
+                <StatsCard title="Salidas" value={filteredSummary.totalExits} icon={<ArrowUpFromLine className="w-6 h-6" />} color="red" subtitle={`${filteredSummary.totalExitQuantity} unidades`} />
+                <StatsCard title="Balance Neto" value={filteredSummary.totalEntryQuantity - filteredSummary.totalExitQuantity} icon={<Package className="w-6 h-6" />} color="blue" subtitle="Diferencia E/S" />
               </div>
 
               {/* Financial Stats */}
@@ -275,7 +349,7 @@ export default function Reports() {
                     </div>
                     <p className="text-sm text-gray-500 font-medium">Ingresos por Ventas</p>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">${movementsReport.summary.totalSaleRevenue.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-bold text-gray-900">${filteredSummary.totalSaleRevenue.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-3 mb-2">
@@ -284,28 +358,28 @@ export default function Reports() {
                     </div>
                     <p className="text-sm text-gray-500 font-medium">Costo de Adquisición</p>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">${movementsReport.summary.totalCostOfSales.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-bold text-gray-900">${filteredSummary.totalCostOfSales.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${movementsReport.summary.totalProfit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${filteredSummary.totalProfit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
                       <TrendingUp className="w-5 h-5 text-white" />
                     </div>
                     <p className="text-sm text-gray-500 font-medium">Utilidad Neta</p>
                   </div>
-                  <p className={`text-2xl font-bold ${movementsReport.summary.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    ${movementsReport.summary.totalProfit.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                  <p className={`text-2xl font-bold ${filteredSummary.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    ${filteredSummary.totalProfit.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${movementsReport.summary.profitMargin >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${filteredSummary.profitMargin >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
                       <BarChart3 className="w-5 h-5 text-white" />
                     </div>
                     <p className="text-sm text-gray-500 font-medium">Margen de Ganancia</p>
                   </div>
-                  <p className={`text-2xl font-bold ${movementsReport.summary.profitMargin >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {movementsReport.summary.profitMargin.toFixed(1)}%
+                  <p className={`text-2xl font-bold ${filteredSummary.profitMargin >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {filteredSummary.profitMargin.toFixed(1)}%
                   </p>
                 </div>
               </div>
@@ -317,7 +391,7 @@ export default function Reports() {
                     Movimientos del {new Date(dateRange.startDate).toLocaleDateString('es-CO')} al {new Date(dateRange.endDate).toLocaleDateString('es-CO')}
                   </h3>
                   <button
-                    onClick={() => exportToXlsx(movementsReport)}
+                    onClick={() => exportToXlsx({ ...movementsReport, movements: filteredMovements, summary: filteredSummary! })}
                     className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition shadow-sm"
                   >
                     <FileSpreadsheet className="w-4 h-4" /> Descargar XLSX
@@ -339,7 +413,7 @@ export default function Reports() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {movementsReport.movements.map((m: any) => {
+                      {filteredMovements.map((m: any) => {
                         const saleTotal = m.saleTotal ? Number(m.saleTotal) : 0;
                         const costTotal = m.product?.cost ? Number(m.product.cost) * m.quantity : 0;
                         const profit = m.type === 'EXIT' ? saleTotal - costTotal : 0;
