@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx vite:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "Bash(node -e \"console.log\\(encodeURIComponent\\(''[Tokio880819.]''\\)\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(nslookup db.zliucfhrjptpphnhzpzl.supabase.co 8.8.8.8)"
+    ]
+  }
+}

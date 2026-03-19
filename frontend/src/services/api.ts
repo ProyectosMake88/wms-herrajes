@@ -1,10 +1,46 @@
 const BASE_URL = '/api';
 
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('wms_token');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
+function getAuthHeadersOnly(): Record<string, string> {
+  const token = localStorage.getItem('wms_token');
+  if (token) return { Authorization: `Bearer ${token}` };
+  return {};
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${url}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     ...options,
   });
+  if (res.status === 401) {
+    localStorage.removeItem('wms_token');
+    localStorage.removeItem('wms_user');
+    window.location.href = '/login';
+    throw new Error('Sesión expirada');
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
+  return data;
+}
+
+async function requestFormData<T>(url: string, method: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${BASE_URL}${url}`, {
+    method,
+    headers: getAuthHeadersOnly(),
+    body: formData,
+  });
+  if (res.status === 401) {
+    localStorage.removeItem('wms_token');
+    localStorage.removeItem('wms_user');
+    window.location.href = '/login';
+    throw new Error('Sesión expirada');
+  }
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
   return data;
@@ -20,18 +56,6 @@ export const categoryApi = {
     request<any>(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => request<any>(`/categories/${id}`, { method: 'DELETE' }),
 };
-
-// Helper para enviar FormData (productos con imagen)
-async function requestFormData<T>(url: string, method: string, formData: FormData): Promise<T> {
-  const res = await fetch(`${BASE_URL}${url}`, {
-    method,
-    body: formData,
-    // NO enviar Content-Type — el navegador lo pone automáticamente con boundary
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
-  return data;
-}
 
 // Products
 export const productApi = {
@@ -93,4 +117,14 @@ export const reportApi = {
     return request<any>(`/reports/movements${query}`);
   },
   getLowStockReport: () => request<any>('/reports/low-stock'),
+};
+
+// Auth / Users
+export const authApi = {
+  getUsers: () => request<any>('/auth/users'),
+  createUser: (data: { email: string; password: string; name: string; role: string }) =>
+    request<any>('/auth/users', { method: 'POST', body: JSON.stringify(data) }),
+  updateUser: (id: number, data: { name?: string; role?: string; isActive?: boolean }) =>
+    request<any>(`/auth/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteUser: (id: number) => request<any>(`/auth/users/${id}`, { method: 'DELETE' }),
 };

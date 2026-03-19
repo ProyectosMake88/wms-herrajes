@@ -4,6 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import routes from './routes';
 import prisma from './config/database';
+import authService from './services/auth.service';
 
 dotenv.config();
 
@@ -36,6 +37,9 @@ async function start() {
   try {
     await prisma.$connect();
     console.log('📦 Base de datos conectada');
+
+    // Crear usuario admin por defecto si no existe ninguno
+    await authService.seedAdmin();
 
     app.listen(PORT, () => {
       console.log(`🚀 WMS Herrajes API corriendo en http://localhost:${PORT}`);
