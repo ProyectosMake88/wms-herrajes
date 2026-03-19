@@ -46,7 +46,7 @@ export default function Sidebar() {
           </div>
         )}
         <div>
-          <h1 className="text-lg font-bold leading-tight">{company?.name || 'WMS'}</h1>
+          <h1 className="text-lg font-bold leading-tight">{company?.name || 'AdVenty'}</h1>
           <p className="text-[11px] text-primary-200 leading-tight">Sistema de Inventario</p>
         </div>
       </div>

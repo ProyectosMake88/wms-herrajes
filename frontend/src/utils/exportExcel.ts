@@ -44,7 +44,7 @@ function addCard(ws: ExcelJS.Worksheet, row: number, col: number, label: string,
 
 export async function exportMovementsReport(report: MovementsReport, companyName?: string) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'WMS Herrajes';
+  wb.creator = 'AdVenty';
   wb.created = new Date();
 
   const s = report.summary;
@@ -78,7 +78,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
 
   ws1.mergeCells('B2:G2');
   const subtitleCell = ws1.getCell('B2');
-  subtitleCell.value = `${companyName || 'WMS Herrajes'} — Sistema de Gestión de Inventarios`;
+  subtitleCell.value = `${companyName || 'AdVenty'} — Sistema de Gestión de Inventarios`;
   subtitleCell.font = { size: 11, color: { argb: 'FFD4C9FF' } };
   subtitleCell.alignment = { horizontal: 'center' };
 
@@ -326,7 +326,7 @@ export async function exportMovementsReport(report: MovementsReport, companyName
   const footerRow = ws2.getRow(totalRowNum + 2);
   ws2.mergeCells(totalRowNum + 2, 2, totalRowNum + 2, 13);
   const footerCell = footerRow.getCell(2);
-  footerCell.value = `WMS Herrajes — Reporte generado el ${new Date().toLocaleString('es-CO')}`;
+  footerCell.value = `AdVenty — Reporte generado el ${new Date().toLocaleString('es-CO')}`;
   footerCell.font = { size: 9, italic: true, color: { argb: 'FF9CA3AF' } };
   footerCell.alignment = { horizontal: 'center' };
 

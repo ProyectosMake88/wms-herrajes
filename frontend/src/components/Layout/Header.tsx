@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
-import { notificationApi, companyApi } from '../../services/api';
+import { notificationApi, companyApi, authApi } from '../../services/api';
 import Modal from '../ui/Modal';
 
 interface Notification {
@@ -48,7 +48,8 @@ function timeAgo(date: string) {
 }
 
 export default function Header({ title, subtitle }: HeaderProps) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin } = useAuth();
+  const [superAdminForm, setSuperAdminForm] = useState({ name: '', email: '' });
   const { company, reload: reloadCompany } = useCompany();
   const navigate = useNavigate();
 
@@ -107,6 +108,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
   }
 
   function openProfile() {
+    if (user) setSuperAdminForm({ name: user.name, email: user.email });
     setCompanyForm({
       name: company?.name || '',
       nit: company?.nit || '',
@@ -271,24 +273,50 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
       {/* Company Profile Modal */}
       <Modal isOpen={showProfile} onClose={() => setShowProfile(false)} title={user?.role === 'SUPER_ADMIN' ? 'Perfil Super Admin' : 'Perfil de la Empresa'} maxWidth="max-w-xl">
-        {/* Super Admin Profile */}
+        {/* Super Admin Profile - Editable */}
         {user?.role === 'SUPER_ADMIN' && (
-          <div className="space-y-4">
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              await authApi.updateProfile({ name: superAdminForm.name, email: superAdminForm.email });
+              // Update local storage
+              const updated = { ...user, name: superAdminForm.name, email: superAdminForm.email };
+              localStorage.setItem('wms_user', JSON.stringify(updated));
+              setShowProfile(false);
+              window.location.reload();
+            } catch (err: any) { alert(err.message); }
+          }} className="space-y-4">
             <div className="flex flex-col items-center">
               <div className="w-24 h-24 bg-amber-50 rounded-2xl flex items-center justify-center border-2 border-amber-200">
                 <Building2 className="w-12 h-12 text-amber-500" />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                <input value={superAdminForm.name} onChange={(e) => setSuperAdminForm({ ...superAdminForm, name: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={superAdminForm.email} onChange={(e) => setSuperAdminForm({ ...superAdminForm, email: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none" />
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Nombre</p><p className="text-sm font-bold">{user.name}</p></div>
-              <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Email</p><p className="text-sm font-bold">{user.email}</p></div>
               <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Rol</p><p className="text-sm font-bold text-amber-600">Super Administrador</p></div>
               <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">Plataforma</p><p className="text-sm font-bold text-primary-600">AdVenty</p></div>
             </div>
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
               <p className="text-xs text-amber-700 font-medium">Tienes acceso total a la plataforma. Puedes crear y gestionar organizaciones, ver estadísticas globales y administrar todos los datos.</p>
             </div>
-          </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setShowProfile(false)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition">Cancelar</button>
+              <button type="submit" className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition shadow-lg shadow-primary-200">
+                <Save className="w-4 h-4" /> Guardar
+              </button>
+            </div>
+          </form>
         )}
 
         {/* Company Profile (Admin/Seller) */}

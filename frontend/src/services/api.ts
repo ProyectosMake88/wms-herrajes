@@ -127,6 +127,8 @@ export const reportApi = {
 
 // Auth / Users
 export const authApi = {
+  updateProfile: (data: { name: string; email: string }) =>
+    request<any>('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
   getUsers: () => request<any>('/auth/users'),
   createUser: (data: { email: string; password: string; name: string; role: string; branchId?: number }) =>
     request<any>('/auth/users', { method: 'POST', body: JSON.stringify(data) }),

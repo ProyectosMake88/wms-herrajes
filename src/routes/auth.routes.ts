@@ -9,6 +9,7 @@ router.post('/login', authController.login);
 
 // Protegido - cualquier usuario autenticado
 router.get('/profile', authMiddleware, authController.getProfile);
+router.put('/profile', authMiddleware, authController.updateProfile);
 
 // Protegido - solo admin
 router.get('/users', authMiddleware, adminOnly, authController.getUsers);

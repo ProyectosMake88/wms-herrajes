@@ -54,9 +54,18 @@ export class AuthController {
     }
   }
 
-  /** Obtener perfil del usuario autenticado */
   async getProfile(req: AuthRequest, res: Response) {
     res.json({ success: true, data: req.user });
+  }
+
+  async updateProfile(req: AuthRequest, res: Response) {
+    try {
+      const { name, email } = req.body;
+      const user = await authService.updateUser(req.user!.id, { name, email });
+      res.json({ success: true, data: user });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message });
+    }
   }
 }
 

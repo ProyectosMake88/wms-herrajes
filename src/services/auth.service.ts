@@ -71,7 +71,7 @@ export class AuthService {
     });
   }
 
-  async updateUser(id: number, data: { name?: string; role?: UserRole; branchId?: number | null; isActive?: boolean }) {
+  async updateUser(id: number, data: { name?: string; email?: string; role?: UserRole; branchId?: number | null; isActive?: boolean }) {
     return prisma.user.update({
       where: { id },
       data,
