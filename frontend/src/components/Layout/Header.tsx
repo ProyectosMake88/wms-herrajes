@@ -328,18 +328,34 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <form onSubmit={async (e) => {
             e.preventDefault();
             try {
-              await authApi.updateProfile(
-                { name: superAdminForm.name, email: superAdminForm.email },
-                avatarFile || undefined
-              );
-              // Re-fetch fresh user data from DB
-              const token = localStorage.getItem('wms_token');
-              const profileRes = await fetch('/api/auth/profile', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-              const profileData = await profileRes.json();
-              if (profileData?.data) {
-                localStorage.setItem('wms_user', JSON.stringify(profileData.data));
-                setCurrentAvatarUrl(profileData.data.avatarUrl || null);
-              }
+              const tk = localStorage.getItem('wms_token');
+              if (!tk) return;
+
+              // 1. Save profile
+              const fd = new FormData();
+              fd.append('name', superAdminForm.name);
+              fd.append('email', superAdminForm.email);
+              if (avatarFile) fd.append('avatar', avatarFile);
+
+              await fetch('/api/auth/profile', {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + tk },
+                body: fd,
+              });
+
+              // 2. Re-fetch fresh data
+              const profileRes = await fetch('/api/auth/profile', {
+                headers: { 'Authorization': 'Bearer ' + tk },
+              });
+              const profileText = await profileRes.text();
+              try {
+                const profileData = JSON.parse(profileText);
+                if (profileData?.data) {
+                  localStorage.setItem('wms_user', JSON.stringify(profileData.data));
+                  setCurrentAvatarUrl(profileData.data.avatarUrl || null);
+                }
+              } catch {}
+
               setShowProfile(false);
             } catch (err: any) { alert(err.message || 'Error al guardar'); }
           }} className="space-y-4">
