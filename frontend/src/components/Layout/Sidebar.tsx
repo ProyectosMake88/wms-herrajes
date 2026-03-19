@@ -8,8 +8,8 @@ import { useCompany } from '../../context/CompanyContext';
 
 const adminNav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/products', icon: Package, label: 'Productos' },
   { to: '/categories', icon: Tags, label: 'Categorías' },
+  { to: '/products', icon: Package, label: 'Productos' },
   { to: '/movements', icon: ArrowLeftRight, label: 'Movimientos' },
   { to: '/reports', icon: BarChart3, label: 'Reportes' },
   { to: '/alerts', icon: AlertTriangle, label: 'Alertas Stock' },
