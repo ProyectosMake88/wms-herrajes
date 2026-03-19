@@ -16,8 +16,8 @@ export class AuthController {
   /** Solo admin puede crear usuarios */
   async createUser(req: AuthRequest, res: Response) {
     try {
-      const { email, password, name, role } = req.body;
-      const user = await authService.register({ email, password, name, role });
+      const { email, password, name, role, branchId } = req.body;
+      const user = await authService.register({ email, password, name, role, branchId: branchId ? Number(branchId) : undefined });
       res.status(201).json({ success: true, data: user });
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message });

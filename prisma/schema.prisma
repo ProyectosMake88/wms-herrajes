@@ -27,6 +27,28 @@ model Company {
 }
 
 // ============================================================
+// SEDES - Sucursales con inventario independiente
+// ============================================================
+model Branch {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique // Código corto: "SEDE-01", "BOG-NORTE"
+  address   String?
+  city      String?
+  phone     String?
+  manager   String?  // Nombre del encargado
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users     User[]
+  products  Product[]
+  movements Movement[]
+
+  @@map("branches")
+}
+
+// ============================================================
 // USUARIOS - Gestión de acceso con roles
 // ============================================================
 model User {
@@ -35,15 +57,18 @@ model User {
   password  String
   name      String
   role      UserRole @default(SELLER)
+  branchId  Int?     @map("branch_id")
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  branch           Branch?        @relation(fields: [branchId], references: [id])
   movements        Movement[]
   notifications    Notification[]
   pendingEntries   PendingEntry[] @relation("PendingEntryUser")
   reviewedEntries  PendingEntry[] @relation("PendingEntryReviewer")
 
+  @@index([branchId])
   @@map("users")
 }
 
@@ -72,6 +97,7 @@ model Product {
   sku              String         @unique
   barcode          String?        @unique
   categoryId       Int            @map("category_id")
+  branchId         Int?           @map("branch_id")
   unitOfMeasure    UnitOfMeasure  @map("unit_of_measure")
   currentStock     Int            @default(0) @map("current_stock")
   minimumStock     Int            @default(100) @map("minimum_stock")
@@ -85,11 +111,13 @@ model Product {
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
   category       Category       @relation(fields: [categoryId], references: [id])
+  branch         Branch?        @relation(fields: [branchId], references: [id])
   movements      Movement[]
   notifications  Notification[]
   pendingEntries PendingEntry[]
 
   @@index([categoryId])
+  @@index([branchId])
   @@index([sku])
   @@index([isLowStock])
   @@map("products")
@@ -102,6 +130,7 @@ model Movement {
   id          Int          @id @default(autoincrement())
   productId   Int          @map("product_id")
   userId      Int?         @map("user_id")
+  branchId    Int?         @map("branch_id")
   type        MovementType
   quantity    Int
   salePrice   Decimal?     @map("sale_price") @db.Decimal(12, 2) // Valor unitario de venta (solo EXIT)
@@ -113,9 +142,11 @@ model Movement {
 
   product Product @relation(fields: [productId], references: [id])
   user    User?   @relation(fields: [userId], references: [id])
+  branch  Branch? @relation(fields: [branchId], references: [id])
 
   @@index([productId])
   @@index([userId])
+  @@index([branchId])
   @@index([type])
   @@index([createdAt])
   @@map("movements")

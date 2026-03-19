@@ -7,6 +7,7 @@ import reportRoutes from './report.routes';
 import notificationRoutes from './notification.routes';
 import companyRoutes from './company.routes';
 import pendingEntryRoutes from './pendingEntry.routes';
+import branchRoutes from './branch.routes';
 import { authMiddleware, adminOnly } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -22,5 +23,6 @@ router.use('/reports', authMiddleware, reportRoutes);
 router.use('/notifications', authMiddleware, notificationRoutes);
 router.use('/company', authMiddleware, companyRoutes);
 router.use('/pending-entries', authMiddleware, pendingEntryRoutes);
+router.use('/branches', authMiddleware, branchRoutes);
 
 export default router;

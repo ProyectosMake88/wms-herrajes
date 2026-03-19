@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Tags, ArrowLeftRight, BarChart3,
-  AlertTriangle, Warehouse, Users, ShoppingBag, LogOut, ClipboardCheck,
+  AlertTriangle, Warehouse, Users, ShoppingBag, LogOut, ClipboardCheck, MapPin,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
@@ -14,6 +14,7 @@ const adminNav = [
   { to: '/reports', icon: BarChart3, label: 'Reportes' },
   { to: '/approvals', icon: ClipboardCheck, label: 'Aprobaciones' },
   { to: '/alerts', icon: AlertTriangle, label: 'Alertas Stock' },
+  { to: '/branches', icon: MapPin, label: 'Sedes' },
   { to: '/users', icon: Users, label: 'Usuarios' },
 ];
 

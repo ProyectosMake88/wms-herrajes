@@ -124,9 +124,9 @@ export const reportApi = {
 // Auth / Users
 export const authApi = {
   getUsers: () => request<any>('/auth/users'),
-  createUser: (data: { email: string; password: string; name: string; role: string }) =>
+  createUser: (data: { email: string; password: string; name: string; role: string; branchId?: number }) =>
     request<any>('/auth/users', { method: 'POST', body: JSON.stringify(data) }),
-  updateUser: (id: number, data: { name?: string; role?: string; isActive?: boolean }) =>
+  updateUser: (id: number, data: { name?: string; role?: string; branchId?: number | null; isActive?: boolean }) =>
     request<any>(`/auth/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUser: (id: number) => request<any>(`/auth/users/${id}`, { method: 'DELETE' }),
 };
@@ -142,6 +142,17 @@ export const companyApi = {
     if (logoFile) formData.append('logo', logoFile);
     return requestFormData<any>('/company', 'PUT', formData);
   },
+};
+
+// Branches
+export const branchApi = {
+  getAll: () => request<any>('/branches'),
+  getById: (id: number) => request<any>(`/branches/${id}`),
+  create: (data: { name: string; code: string; address?: string; city?: string; phone?: string; manager?: string }) =>
+    request<any>('/branches', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) =>
+    request<any>(`/branches/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => request<any>(`/branches/${id}`, { method: 'DELETE' }),
 };
 
 // Pending Entries

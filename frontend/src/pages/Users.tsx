@@ -1,31 +1,41 @@
 import { useEffect, useState } from 'react';
-import { Plus, UserCheck, UserX, Shield, ShoppingBag, Edit3, Trash2 } from 'lucide-react';
+import { Plus, UserCheck, UserX, Shield, ShoppingBag, Edit3, Trash2, MapPin } from 'lucide-react';
 import Header from '../components/Layout/Header';
 import Modal from '../components/ui/Modal';
-import { authApi } from '../services/api';
+import { authApi, branchApi } from '../services/api';
+
+interface Branch {
+  id: number;
+  name: string;
+  code: string;
+}
 
 interface User {
   id: number;
   email: string;
   name: string;
   role: 'ADMIN' | 'SELLER';
+  branchId: number | null;
+  branch: Branch | null;
   isActive: boolean;
   createdAt: string;
 }
 
 export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'SELLER' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'SELLER', branchId: '' });
 
   useEffect(() => { loadUsers(); }, []);
 
   async function loadUsers() {
     try {
-      const res = await authApi.getUsers();
-      setUsers(res.data);
+      const [usersRes, branchesRes] = await Promise.all([authApi.getUsers(), branchApi.getAll()]);
+      setUsers(usersRes.data);
+      setBranches(branchesRes.data);
     } catch (error) {
       console.error(error);
     } finally {
@@ -35,13 +45,13 @@ export default function Users() {
 
   function openCreate() {
     setEditing(null);
-    setFormData({ name: '', email: '', password: '', role: 'SELLER' });
+    setFormData({ name: '', email: '', password: '', role: 'SELLER', branchId: '' });
     setShowModal(true);
   }
 
   function openEdit(user: User) {
     setEditing(user);
-    setFormData({ name: user.name, email: user.email, password: '', role: user.role });
+    setFormData({ name: user.name, email: user.email, password: '', role: user.role, branchId: user.branchId ? String(user.branchId) : '' });
     setShowModal(true);
   }
 
@@ -49,13 +59,14 @@ export default function Users() {
     e.preventDefault();
     try {
       if (editing) {
-        await authApi.updateUser(editing.id, { name: formData.name, role: formData.role });
+        await authApi.updateUser(editing.id, { name: formData.name, role: formData.role, branchId: formData.branchId ? Number(formData.branchId) : null });
       } else {
         await authApi.createUser({
           name: formData.name,
           email: formData.email,
           password: formData.password,
           role: formData.role,
+          branchId: formData.branchId ? Number(formData.branchId) : undefined,
         });
       }
       setShowModal(false);
@@ -137,7 +148,14 @@ export default function Users() {
               </span>
             </div>
 
-            <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
+            {user.branch && (
+              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                <MapPin className="w-3.5 h-3.5 text-primary-400" />
+                <span className="text-xs font-medium text-primary-600">{user.branch.name}</span>
+                <span className="text-[10px] text-gray-400">({user.branch.code})</span>
+              </div>
+            )}
+            <div className="mt-2 text-xs text-gray-400">
               Creado: {new Date(user.createdAt).toLocaleDateString('es-CO')}
             </div>
 
@@ -205,6 +223,17 @@ export default function Users() {
                 <p className="text-[10px] text-gray-500 mt-0.5">Acceso total</p>
               </button>
             </div>
+          </div>
+
+          {/* Branch Selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sede asignada</label>
+            <select value={formData.branchId} onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+              className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 focus:outline-none">
+              <option value="">Sin sede (acceso global)</option>
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}
+            </select>
+            <p className="text-[11px] text-gray-400 mt-1">Los usuarios asignados a una sede solo ven el inventario de esa sede</p>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

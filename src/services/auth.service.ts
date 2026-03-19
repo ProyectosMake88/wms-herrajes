@@ -11,6 +11,7 @@ interface RegisterDTO {
   password: string;
   name: string;
   role?: UserRole;
+  branchId?: number;
 }
 
 interface LoginDTO {
@@ -30,15 +31,19 @@ export class AuthService {
         password: hashedPassword,
         name: data.name,
         role: data.role || UserRole.SELLER,
+        branchId: data.branchId || null,
       },
-      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, branchId: true, isActive: true, createdAt: true },
     });
 
     return user;
   }
 
   async login(data: LoginDTO) {
-    const user = await prisma.user.findUnique({ where: { email: data.email } });
+    const user = await prisma.user.findUnique({
+      where: { email: data.email },
+      include: { branch: { select: { id: true, name: true } } },
+    });
     if (!user) throw new Error('Credenciales inválidas');
     if (!user.isActive) throw new Error('Usuario desactivado. Contacta al administrador');
 
@@ -46,25 +51,25 @@ export class AuthService {
     if (!validPassword) throw new Error('Credenciales inválidas');
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, name: user.name },
+      { id: user.id, email: user.email, role: user.role, name: user.name, branchId: user.branchId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
 
     return {
       token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, branchId: user.branchId, branch: user.branch },
     };
   }
 
   async getAllUsers() {
     return prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, branchId: true, isActive: true, createdAt: true, branch: { select: { id: true, name: true, code: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async updateUser(id: number, data: { name?: string; role?: UserRole; isActive?: boolean }) {
+  async updateUser(id: number, data: { name?: string; role?: UserRole; branchId?: number | null; isActive?: boolean }) {
     return prisma.user.update({
       where: { id },
       data,
